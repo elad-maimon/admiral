@@ -152,7 +152,7 @@ CREATE TABLE initiatives (
 --   planning_status='closed' = PM has manually signed off this epic
 --   execution_status='done'  = all deliverables are marked done
 --
--- importance: 1=Mandatory, 2=Strategic, 3=High, 4=Nice to Have, NULL=Unset
+-- importance: 1=Committed, 2=Strategic, 3=High, 4=Nice to Have, NULL=Unset
 -- target_date: last day of target month (e.g. 2025-03-31)
 
 CREATE TABLE epics (
@@ -421,7 +421,7 @@ Expand rows to see children. Edit in place. Modals only for create flows. Compac
 ▼ CORE PLATFORM
   ┌────────────────────────────────────────────────────────────────┐
   │ Auth Revamp          Dana    ████████░░  67%   Target: Apr 31 │
-  │ 4/6 epics done  |  Mandatory (highest importance epic)        │
+  │ 4/6 epics done  |  Committed (highest importance epic)        │
   └────────────────────────────────────────────────────────────────┘
   ┌────────────────────────────────────────────────────────────────┐
   │ Perf Optimization    Roy     ████░░░░░░  40%   Target: Jun 30 │
@@ -437,7 +437,7 @@ Expand rows to see children. Edit in place. Modals only for create flows. Compac
 ```
   ▼ Auth Revamp
     ┌──────────────────────────────────────────────────────────────┐
-    │ Login Flow Redesign  |  Dana  |  Mandatory  |  Mar 31       │
+    │ Login Flow Redesign  |  Dana  |  Committed  |  Mar 31       │
     │ ██████░░  3/4 deliverables  |  In Progress                  │
     ├──────────────────────────────────────────────────────────────┤
     │ Password Reset       |  Roy   |  Strategic  |  Apr 30       │
@@ -465,7 +465,7 @@ All fields editable inline (title, owner, target date).
 ```
 Initiative       Epic                   Owner   Importance  Target   Progress      Status
 ───────────────────────────────────────────────────────────────────────────────────────────
-Auth Revamp   ▶  Login Flow Redesign    Dana    Mandatory   Mar 31   ████░  75%    In Progress
+Auth Revamp   ▶  Login Flow Redesign    Dana    Committed   Mar 31   ████░  75%    In Progress
 Auth Revamp   ▶  Password Reset         Roy     Strategic   Apr 30   ░░░░░   0%    Scoping
 Perf Opt      ▶  DB Query Optimization  Sam     High        May 31   ██░░░  40%    In Progress
 ```
@@ -802,33 +802,67 @@ RLS: role in `people.permission`, joined via `auth.uid()` → `people.auth_user_
 
 ```
 TEAMS
-  "Core Platform"
-  "Growth"
+  "רום"
+  "מפעל המידע"
+  "אקו-סיסטם"
 
 PEOPLE
-  Dana  | manager | Core Platform | admin  | counts_toward_capacity: true
-  Sam   | eng     | Core Platform | member | counts_toward_capacity: true
-  Roy   | eng     | Core Platform | member | counts_toward_capacity: true
-  Maya  | product | Growth        | member | counts_toward_capacity: false
-  Alex  | eng     | Growth        | member | counts_toward_capacity: true
-  Casey | other   | (no team)     | viewer | counts_toward_capacity: false
+  אלעד מימון  | manager | No team | admin  | counts_toward_capacity: false
+  נופר דביר  | manager | No team | admin  | counts_toward_capacity: false
+  בידי אלקיים   | manager     | רום | member | counts_toward_capacity: false
+  קארן יצחק   | eng     | רום | member | counts_toward_capacity: true
+  גיא אביסרור   | eng     | רום | member | counts_toward_capacity: true
+  עינת לוי  | product | רום        | member | counts_toward_capacity: false
+  שקד אלון   | manager     | מפעל המידע | member | counts_toward_capacity: false
+  דניאל לנדאו   | eng     | מפעל המידע | member | counts_toward_capacity: true
+  אושר יוסף   | eng     | מפעל המידע | member | counts_toward_capacity: true
+  נועם ריזה  | product | מפעל המידע  | member | counts_toward_capacity: false
+  אורי צדיקריו   | eng     | אקו-סיסטם | member | counts_toward_capacity: true
+  ליבי ספנסר   | eng     | אקו-סיסטם | member | counts_toward_capacity: true
+  יותם אמרגי  | product | אקו-סיסטם  | member | counts_toward_capacity: false
 
 OBJECTIVES (standalone — not linked to initiatives)
-  "Reduce Churn Q2"
-  "Improve Platform Reliability"
+  "לאפשר הפעלה נרחבת של אמצעים ויכולות ברוק״ק לאגבור יכולת הפעולה של כלל מפעילי הכח"
+  "לסנכרן הפעלת אמצעים מוטסים ברוק״ק עם אש מהקרקע (תמ״ס והגנ״א) ועם לוחמה אלקטרונית, תוך צמצום ההפרעה ההדדית"
+  "להפעיל, לתאם ולסנכרן יכולות הגנה כנגד איומים אויריים המופעלים כנגד תשתיות, כוחות היבשה בתמרון ובגבולות"
 
 INITIATIVES
-  "Auth Revamp"        | owner: Dana
-  "Perf Optimization"  | owner: Roy
-  "Org-Level Infra"    | owner: Alex  ← no team → Org Level
+  "עוקב והיתוך"                  | Owner: אלעד
+  "dev happiness"                | Owner: אלעד
+  "המלצות אוטומטיות"             | Owner: אלעד
+  "הטמעות"                       | Owner: בר
+  "קשרי לקוחות"                  | Owner: בר
+  "ניהול ותכנון מרשמי טיסה"      | Owner: יותם
+  "סימולטור"                     | Owner: יותם
+  "ניהול תשתיות שמיים ברוק״ק"    | Owner: יותם
+  "העשרת מקורות גילוי"           | Owner: נועם
+  "חיבור רב-ארגוני"              | Owner: נועם
+  "הרמטיות ותקינת מידע"          | Owner: נועם
+  "מאגר כמוצר"                   | Owner: נועם
+  "הרחבת מפעל המידע"             | Owner: נועם
+  "הנגשות מאגר"                  | Owner: נועם
+  "מידור והרשאות"                | Owner: נועם
+  "היסטוריית מידע"               | Owner: נועם
+  "רציפות, שרידות וביצועים"      | Owner: נופר
+  "תחקור טכנו-מבצעי"             | Owner: נופר
+  "מחקר ביצועים"                 | Owner: נופר
+  "תחקור מבצעי"                  | Owner: נופר
+  "תמונה מודיעינית"              | Owner: עינת
+  "ניהול צד כחול"                | Owner: עינת
+  "תמונ״ש ברוק״ק (רום)"          | Owner: עינת
+  "ניהול סנסורים"                | Owner: עינת
+  "הפצה וניהול תמונ״ש בלומ״ר"    | Owner: עינת
+  "ניהול אירועי רוק״ק"           | Owner: עינת
+  "פו״ש ודגלים"                  | Owner: עינת
+  "התרעות משתמש"                 | Owner: עינת
 
-EPICS (under Auth Revamp)
+EPICS (under עוקב והיתוך)
   "Login Flow Redesign" | importance: 1 | planning_status: active
                         | target_date: last day of current month + 1
   "Password Reset"      | importance: 2 | planning_status: scoping
                         | target_date: last day of current month + 2
 
-DELIVERABLES (under Login Flow Redesign)
+DELIVERABLES (under הטמעות)
   "OAuth Integration" | owner: Sam | status: done    | est: 5d
                       | planned_week_start: Sunday 2 weeks ago
                       | planned_week_end:   Sunday 1 week ago
@@ -989,7 +1023,7 @@ MILESTONE AT-RISK (this version)
   Phase 3 adds milestone_dependencies table and auto-derivation.
 
 IMPORTANCE DISPLAY MAP  (config/constants.ts)
-  1 → "Mandatory"
+  1 → "Committed"
   2 → "Strategic"
   3 → "High"
   4 → "Nice to Have"
@@ -1002,3 +1036,44 @@ METADATA ESCAPE HATCH
 GANTT LIBRARY
   frappe-gantt preferred. Do not build custom SVG. Build last in Phase 2.
 ```
+
+---
+
+## 9. Localization & RTL
+
+- App is fully RTL. Set `dir="rtl"` on the root `<html>` element.
+- Use Tailwind's RTL variants where needed (`rtl:` prefix) or a plugin like `tailwindcss-rtl`.
+- Font: use `Noto Sans Hebrew` or `Assistant` (both free on Google Fonts,
+  excellent Hebrew rendering).
+
+LANGUAGE RULES:
+  - UI language is Hebrew.
+  - The following terms stay in English (no translation):
+      Epic, Deliverable, Lighthouse, Initiative, Roadmap, Backlog, RFD, Feature Lead, Feature Team, Owner, DoD, Active, Scoping, Cancelled, Closed, Blocked, In Dev, Done, Capacity
+  - Everything else is Hebrew. Examples:
+      Team       → צוות
+      People     → אנשים
+      Status     → סטטוס
+      Committed  → התחייבות
+      Strategic  → אסטרטגי
+      High       → גבוה
+      Planned    → מתוכנן
+      Target     → יעד
+      Delay      → עיכוב
+      Week       → שבוע
+      Month      → חודש
+      Progress   → התקדמות
+      Save       → שמור
+      Cancel     → ביטול
+      Add        → הוסף
+      Edit       → ערוך
+      Delete     → מחק
+      Share      → שתף
+      Export     → ייצוא
+      Commit     → אשר
+      Search     → חיפוש
+
+  Store all display strings in a single `lib/i18n.ts` constants file.
+  Keep also the terms that stay in English in the same file with the English value.
+  Do not hardcode Hebrew strings in components — always import from i18n.ts.
+  This makes future edits easy without hunting through components.
