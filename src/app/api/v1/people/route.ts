@@ -15,3 +15,22 @@ export async function GET(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
+
+export async function POST(request: Request) {
+  const supabase = createClient();
+  try {
+    const body = await request.json();
+    if (!body.name) return NextResponse.json({ error: 'Missing name' }, { status: 400 });
+
+    const { data, error } = await supabase
+      .from('people')
+      .insert([body])
+      .select()
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data);
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
