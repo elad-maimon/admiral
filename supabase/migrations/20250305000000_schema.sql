@@ -26,6 +26,7 @@ CREATE TABLE people (
                             CHECK (permission IN ('admin', 'member', 'viewer')),
   join_date               DATE,
   leave_date              DATE,
+  active                  BOOLEAN NOT NULL DEFAULT TRUE,
   counts_toward_capacity  BOOLEAN NOT NULL DEFAULT TRUE,
   created_at              TIMESTAMPTZ DEFAULT NOW()
 );

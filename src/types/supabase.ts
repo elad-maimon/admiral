@@ -417,6 +417,7 @@ export type Database = {
       }
       people: {
         Row: {
+          active: boolean
           auth_user_id: string | null
           counts_toward_capacity: boolean
           created_at: string | null
@@ -430,6 +431,7 @@ export type Database = {
           team_id: string | null
         }
         Insert: {
+          active?: boolean
           auth_user_id?: string | null
           counts_toward_capacity?: boolean
           created_at?: string | null
@@ -443,6 +445,7 @@ export type Database = {
           team_id?: string | null
         }
         Update: {
+          active?: boolean
           auth_user_id?: string | null
           counts_toward_capacity?: boolean
           created_at?: string | null

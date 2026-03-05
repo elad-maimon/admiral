@@ -4,15 +4,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { i18n } from '@/lib/i18n';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, UserCog } from 'lucide-react';
+import { Plus, Users, UserCog, Edit, History } from 'lucide-react';
 import { InlineEdit } from "@/components/ui/inline-edit";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { PersonEditModal } from './person-edit-modal';
 
 export function TeamsDashboard() {
   const queryClient = useQueryClient();
 
-  // Fetch Teams
   const { data: teams, isLoading: loadingTeams } = useQuery({
     queryKey: ['teams'],
     queryFn: async () => {
@@ -21,11 +23,15 @@ export function TeamsDashboard() {
     }
   });
 
-  // Fetch all people
+  const [showHistorical, setShowHistorical] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<string>('all');
+  const [editingPerson, setEditingPerson] = useState<any | null>(null);
+
   const { data: people, isLoading: loadingPeople } = useQuery({
-    queryKey: ['people'],
+    queryKey: ['people', showHistorical],
     queryFn: async () => {
-      const res = await fetch('/api/v1/people');
+      const activeParam = showHistorical ? '?active=none' : '';
+      const res = await fetch(`/api/v1/people${activeParam}`);
       return res.json();
     }
   });
@@ -66,7 +72,8 @@ export function TeamsDashboard() {
           team_id: teamId,
           role: 'eng',
           permission: 'member',
-          counts_toward_capacity: true
+          counts_toward_capacity: true,
+          active: true
         })
       });
       if (!res.ok) throw new Error('Failed to create person');
@@ -88,41 +95,47 @@ export function TeamsDashboard() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['people'] })
   });
 
-  const [selectedTeam, setSelectedTeam] = useState<string>('all');
+  // We don't filter people array here anymore since the API does it.
+  const filteredPeople = people || [];
 
-  if (loadingTeams || loadingPeople) return <div className="p-4 animate-pulse">טוען נתונים...</div>;
+  let peopleByTeam: any[] = [];
 
-  let peopleByTeam = (teams || []).map((team: any) => {
-    const members = (people || []).filter((p: any) => p.team_id === team.id);
-    const capacityCount = members.filter((m: any) => m.counts_toward_capacity).length;
-    return {
-      ...team,
-      members,
-      capacityCount
-    };
-  });
-
-  const unassignedMembers = (people || []).filter((p: any) => !p.team_id);
-  if (unassignedMembers.length > 0) {
-    peopleByTeam.push({
-      id: 'unassigned',
-      name: 'ללא קבוצה',
-      members: unassignedMembers,
-      capacityCount: unassignedMembers.filter((m: any) => m.counts_toward_capacity).length,
-      isUnassigned: true
+  if (showHistorical) {
+    peopleByTeam = [{
+      id: 'historical',
+      name: 'כל היסטוריית המשתמשים',
+      members: filteredPeople,
+      capacityCount: 0,
+      isHistoricalWrapper: true
+    }];
+  } else {
+    peopleByTeam = (teams || []).map((team: any) => {
+      const members = filteredPeople.filter((p: any) => p.team_id === team.id);
+      const capacityCount = members.filter((m: any) => m.counts_toward_capacity).length;
+      return { ...team, members, capacityCount };
     });
-  }
 
-  // Apply Team Filter
-  if (selectedTeam !== 'all') {
-    peopleByTeam = peopleByTeam.filter((t: any) => t.id === selectedTeam);
+    const unassignedMembers = filteredPeople.filter((p: any) => !p.team_id);
+    if (unassignedMembers.length > 0) {
+      peopleByTeam.push({
+        id: 'unassigned',
+        name: 'ללא קבוצה',
+        members: unassignedMembers,
+        capacityCount: unassignedMembers.filter((m: any) => m.counts_toward_capacity).length,
+        isUnassigned: true
+      });
+    }
+
+    if (selectedTeam !== 'all') {
+      peopleByTeam = peopleByTeam.filter((t: any) => t.id === selectedTeam);
+    }
   }
 
   const roleColors: Record<string, string> = {
-    'eng': 'bg-blue-100 text-blue-800 border-blue-200',
-    'product': 'bg-purple-100 text-purple-800 border-purple-200',
-    'manager': 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    'other': 'bg-slate-100 text-slate-800 border-slate-200'
+    'eng': 'bg-blue-100/50 text-blue-800 border-[0.5px] border-blue-200',
+    'product': 'bg-purple-100/50 text-purple-800 border-[0.5px] border-purple-200',
+    'manager': 'bg-emerald-100/50 text-emerald-800 border-[0.5px] border-emerald-200',
+    'other': 'bg-slate-100/50 text-slate-800 border-[0.5px] border-slate-200'
   };
 
   const roleLabels: Record<string, string> = {
@@ -132,73 +145,103 @@ export function TeamsDashboard() {
     'other': 'אחר'
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '-';
+    // Handle Supabase DATE string format YYYY-MM-DD
+    return new Date(dateString).toLocaleDateString('he-IL');
+  };
+
   return (
     <div className="space-y-8 pb-12">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">{i18n.nav.teams}</h1>
+        <div className="flex items-center gap-6">
+          <h1 className="text-3xl font-bold tracking-tight">{i18n.nav.teams}</h1>
 
-        <div className="flex items-center gap-4">
-          <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="כל הצוותים" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">כל הצוותים</SelectItem>
-              {teams?.map((team: any) => (
-                <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-              ))}
-              {unassignedMembers.length > 0 && (
-                <SelectItem value="unassigned">ללא קבוצה</SelectItem>
-              )}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center space-x-2 space-x-reverse bg-white px-4 py-2 rounded-md shadow-sm border">
+            <Switch
+              id="historical_mode"
+              checked={showHistorical}
+              onCheckedChange={setShowHistorical}
+            />
+            <Label htmlFor="historical_mode" className="text-slate-600 font-medium flex items-center gap-1 cursor-pointer">
+              <History className="w-4 h-4 ml-1" />
+              מידע היסטורי
+            </Label>
+          </div>
 
-          <Button onClick={() => createTeam.mutate()} disabled={createTeam.isPending}>
-            <Plus className="w-4 h-4 ml-2" />
-            הוסף צוות
-          </Button>
+          {!showHistorical && (
+            <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+              <SelectTrigger className="w-[180px] bg-white">
+                <SelectValue placeholder="כל הצוותים" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">כל הצוותים</SelectItem>
+                {teams?.map((team: any) => (
+                  <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                ))}
+                {(filteredPeople || []).filter((p: any) => !p.team_id).length > 0 && (
+                  <SelectItem value="unassigned">ללא קבוצה</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
+        <div>
+          {!showHistorical && (
+            <Button onClick={() => createTeam.mutate()} disabled={createTeam.isPending}>
+              <Plus className="w-4 h-4 ml-2" />
+              הוסף צוות
+            </Button>
+          )}
         </div>
       </div>
 
       <div className="border bg-white shadow-sm rounded-md overflow-hidden">
-        {/* Table Header */}
-        <div className="grid grid-cols-[minmax(200px,1fr)_120px_100px_150px_80px_60px] gap-4 p-3 bg-slate-100 border-b font-semibold text-slate-600 text-sm">
+        {/* Table Header: Name, Role, Capacity, Join, Leave, Actions */}
+        <div className="grid grid-cols-[minmax(180px,1fr)_120px_80px_100px_100px_60px] gap-4 p-3 bg-slate-50 border-b font-semibold text-slate-600 text-sm pl-4 pr-6">
           <div>שם</div>
           <div>תפקיד</div>
-          <div>הרשאה</div>
-          <div>שיוך צוות</div>
           <div className="text-center" title="נספר בחישוב קיבולת למחזור?">קיבולת?</div>
+          <div className="text-center">תאריך הצטרפות</div>
+          <div className="text-center">תאריך עזיבה</div>
           <div className="text-center">פעולות</div>
         </div>
 
         <div className="divide-y divide-slate-200">
-          {peopleByTeam.map((team: any) => (
+          {peopleByTeam.length === 0 ? (
+             <div className="p-8 text-center text-slate-500 italic">אין צוותים או אנשים מתאימים לפילטרים.</div>
+          ) : peopleByTeam.map((team: any) => (
             <div key={team.id} className="group/team">
               {/* Group Header */}
-              <div className="bg-slate-50/80 p-3 flex items-center justify-between border-b">
-                <div className="flex items-center gap-3">
-                  <div className={`p-1.5 rounded bg-primary/10 text-primary`}>
-                    {team.isUnassigned ? <UserCog className="w-4 h-4" /> : <Users className="w-4 h-4" />}
+              {!showHistorical && (
+                <div className="bg-slate-100/50 p-3 px-4 flex items-center justify-between border-b">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-1.5 rounded ${showHistorical ? 'bg-amber-100 text-amber-700' : 'bg-primary/10 text-primary'}`}>
+                      {team.isUnassigned ? <UserCog className="w-4 h-4" /> : <Users className="w-4 h-4" />}
+                    </div>
+                    {team.isUnassigned ? (
+                      <span className="font-bold text-slate-700">{team.name}</span>
+                    ) : (
+                      <InlineEdit
+                        value={team.name}
+                        onSave={(val) => updateTeam.mutate({ id: team.id, updates: { name: val } })}
+                        className="font-bold text-slate-900 text-base h-7"
+                      />
+                    )}
+                    <span className="ml-4 text-xs font-medium text-slate-500 px-2 py-0.5 rounded-full shadow-sm border bg-white">
+                      סה"כ: {team.members.length} {team.members.length > 0 && !showHistorical && `| קיבולת: ${team.capacityCount}`}
+                    </span>
                   </div>
-                  {team.isUnassigned ? (
-                    <span className="font-bold text-slate-700">{team.name}</span>
-                  ) : (
-                    <InlineEdit
-                      value={team.name}
-                      onSave={(val) => updateTeam.mutate({ id: team.id, updates: { name: val } })}
-                      className="font-bold text-slate-900 text-base h-7"
-                    />
-                  )}
-                  <span className="ml-4 text-xs font-semibold text-slate-500 bg-white border px-2 py-0.5 rounded-full shadow-sm">
-                    סה"כ: {team.members.length} | קיבולת: {team.capacityCount}
-                  </span>
-                </div>
 
-                <Button variant="ghost" size="sm" className="h-7 text-xs text-primary hover:bg-primary/10 -my-1" onClick={() => createPerson.mutate(team.isUnassigned ? null : team.id)}>
-                  <Plus className="w-3 h-3 ml-1" />
-                  הוסף לשורה
-                </Button>
-              </div>
+                  {!showHistorical && (
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-primary hover:bg-primary/10 -my-1" onClick={() => createPerson.mutate(team.isUnassigned ? null : team.id)}>
+                      <Plus className="w-3 h-3 ml-1" />
+                      הוסף אדם
+                    </Button>
+                  )}
+                </div>
+              )}
 
               {/* Group Rows */}
               <div className="divide-y divide-slate-100">
@@ -206,68 +249,48 @@ export function TeamsDashboard() {
                   <div className="p-4 text-center text-sm text-slate-400 italic bg-white">אין אנשים משויכים עדיין.</div>
                 ) : (
                   team.members.map((person: any) => (
-                    <div key={person.id} className="grid grid-cols-[minmax(200px,1fr)_120px_100px_150px_80px_60px] gap-4 p-2 px-3 items-center hover:bg-slate-50 transition-colors bg-white text-sm">
-                      <div className="font-medium text-slate-900 pr-8">
-                        <InlineEdit
-                          value={person.name}
-                          onSave={(val) => updatePerson.mutate({ id: person.id, updates: { name: val } })}
-                          className="font-medium h-7"
-                        />
+                    <div key={person.id} className={`grid grid-cols-[minmax(180px,1fr)_120px_80px_100px_100px_60px] gap-4 p-2 px-6 items-center hover:bg-slate-50 transition-colors text-sm ${showHistorical ? 'bg-amber-50/10' : 'bg-white'}`}>
+                      {/* Name - not editable inline */}
+                      <div className="font-medium text-slate-900 pr-2">
+                        {person.name}
                       </div>
 
+                      {/* Role - not editable inline */}
                       <div>
-                        <Select value={person.role || 'other'} onValueChange={(val) => updatePerson.mutate({ id: person.id, updates: { role: val } })}>
-                          <SelectTrigger className="h-7 border-transparent hover:border-slate-300 focus:ring-0 shadow-none px-2 -ml-2 bg-transparent">
-                             <div className={`text-xs px-2 py-0.5 rounded-full border ${roleColors[person.role || 'other']}`}>
-                               {roleLabels[person.role || 'other']}
-                             </div>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="eng">מפתח/ת</SelectItem>
-                            <SelectItem value="product">מוצר</SelectItem>
-                            <SelectItem value="manager">מנהל/ת</SelectItem>
-                            <SelectItem value="other">אחר</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className={`text-xs px-2.5 py-1 rounded-full text-center font-medium ${roleColors[person.role || 'other']}`}>
+                          {roleLabels[person.role || 'other']}
+                        </div>
                       </div>
 
-                      <div>
-                        <Select value={person.permission || 'viewer'} onValueChange={(val) => updatePerson.mutate({ id: person.id, updates: { permission: val } })}>
-                          <SelectTrigger className="h-7 text-xs border-transparent hover:border-slate-300 focus:ring-0 shadow-none px-2 -ml-2 bg-transparent">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="member">Member</SelectItem>
-                            <SelectItem value="viewer">Viewer</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <Select value={person.team_id || 'unassigned'} onValueChange={(val) => updatePerson.mutate({ id: person.id, updates: { team_id: val === 'unassigned' ? null : val } })}>
-                          <SelectTrigger className="h-7 text-xs border-transparent hover:border-slate-300 focus:ring-0 shadow-none px-2 -ml-2 text-slate-500 max-w-[150px] bg-transparent">
-                            <div className="truncate text-right w-full"><SelectValue /></div>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="unassigned">ללא צוות</SelectItem>
-                            {teams?.map((t: any) => (
-                              <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
+                      {/* Capacity - Editable Inline */}
                       <div className="flex justify-center">
                         <Checkbox
                           checked={person.counts_toward_capacity}
                           onCheckedChange={(checked: boolean | "indeterminate") => updatePerson.mutate({ id: person.id, updates: { counts_toward_capacity: checked === true } })}
+                          disabled={showHistorical}
                         />
                       </div>
 
+                      {/* Join Date - View Only */}
+                      <div className="text-center text-slate-600 text-xs">
+                        {formatDate(person.join_date)}
+                      </div>
+
+                      {/* Leave Date - View Only */}
+                      <div className="text-center text-slate-600 text-xs">
+                        {formatDate(person.leave_date)}
+                      </div>
+
+                      {/* Actions */}
                       <div className="flex justify-center">
-                        {/* Placeholder for future delete/row actions if needed */}
-                        <div className="w-5 h-5 opacity-0"></div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-7 h-7 text-slate-400 hover:text-slate-900 hover:bg-slate-200"
+                          onClick={() => setEditingPerson(person)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
                   ))
@@ -277,6 +300,14 @@ export function TeamsDashboard() {
           ))}
         </div>
       </div>
+
+      <PersonEditModal
+        person={editingPerson}
+        isOpen={!!editingPerson}
+        onClose={() => setEditingPerson(null)}
+        onSave={(id: string, updates: any) => updatePerson.mutate({ id, updates })}
+        teams={teams || []}
+      />
     </div>
   );
 }

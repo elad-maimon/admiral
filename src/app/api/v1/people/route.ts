@@ -5,10 +5,17 @@ export async function GET(request: Request) {
   const supabase = createClient();
   const { searchParams } = new URL(request.url);
   const teamId = searchParams.get('team_id');
+  const activeParam = searchParams.get('active');
 
   let query = supabase.from('people').select('*').order('name');
   if (teamId) {
     query = query.eq('team_id', teamId);
+  }
+
+  if (activeParam === 'none') {
+    query = query.eq('active', false);
+  } else if (activeParam !== 'both') {
+    query = query.eq('active', true);
   }
 
   const { data, error } = await query;
