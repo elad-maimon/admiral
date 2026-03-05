@@ -2,7 +2,7 @@ export const i18n = {
   // Navigation
   nav: {
     initiatives: "Initiatives",
-    epics: "Epics",
+    epics: "Deliverables",
     lighthouse: "Lighthouse",
     roadmap: "Roadmap",
     teams: "Teams"

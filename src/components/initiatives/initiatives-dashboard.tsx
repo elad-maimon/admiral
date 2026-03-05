@@ -2,19 +2,42 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { i18n } from '@/lib/i18n';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Plus, ChevronDown, ChevronUp, ArrowUpDown } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, ArrowUpDown, Target } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { InlineEdit } from "@/components/ui/inline-edit";
 
 export function InitiativesDashboard() {
-  const [selectedOwner, setSelectedOwner] = useState<string>('all');
-  const [sortField, setSortField] = useState<string>('id');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [selectedOwner, setSelectedOwner] = useState<string>(
+    searchParams.get('owner') || 'all'
+  );
+  const [sortField, setSortField] = useState<string>(
+    searchParams.get('sort') || 'id'
+  );
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(
+    (searchParams.get('dir') as 'asc' | 'desc') || 'asc'
+  );
+
   const queryClient = useQueryClient();
+
+  // Sync state to URL and localStorage
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedOwner !== 'all') params.set('owner', selectedOwner);
+    if (sortField !== 'id') params.set('sort', sortField);
+    if (sortDirection !== 'asc') params.set('dir', sortDirection);
+
+    const newUrl = `?${params.toString()}`;
+    router.replace(newUrl, { scroll: false });
+    localStorage.setItem('admiral_initiatives_state', newUrl);
+  }, [selectedOwner, sortField, sortDirection, router]);
 
   const { data: people, isLoading: loadingPeople } = useQuery({
     queryKey: ['people'],
@@ -121,23 +144,29 @@ export function InitiativesDashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">{i18n.nav.initiatives}</h1>
+      <div className="flex items-center justify-between border-b pb-4">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
+           <Target className="w-6 h-6 text-primary" />
+           {i18n.nav.initiatives}
+        </h1>
 
         <div className="flex items-center gap-4">
-          <Select value={selectedOwner} onValueChange={setSelectedOwner}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="כל הבעלים" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">כל הבעלים</SelectItem>
-              {people?.filter((p: any) => ['manager', 'product'].includes(p.role) || true).map((person: any) => (
-                <SelectItem key={person.id} value={person.id}>{person.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-500 font-medium">סינון בעלים:</span>
+            <Select value={selectedOwner} onValueChange={setSelectedOwner}>
+              <SelectTrigger className="w-[200px] bg-white h-9 shadow-sm">
+                <SelectValue placeholder="כל הבעלים" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">כל הבעלים</SelectItem>
+                {people?.filter((p: any) => ['manager', 'product'].includes(p.role) || true).map((person: any) => (
+                  <SelectItem key={person.id} value={person.id}>{person.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Button onClick={() => createInitiative.mutate()} disabled={createInitiative.isPending}>
+          <Button onClick={() => createInitiative.mutate()} disabled={createInitiative.isPending} className="shadow-sm">
             <Plus className="w-4 h-4 ml-2" />
             {i18n.common.add} יוזמה
           </Button>

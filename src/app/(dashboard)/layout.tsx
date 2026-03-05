@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { i18n } from "@/lib/i18n";
 import { LayoutDashboard, Target, ListTodo, Map, Users } from "lucide-react";
 
@@ -17,7 +21,7 @@ export default function DashboardLayout({
               <NavLink href="/initiatives" icon={<LayoutDashboard className="w-4 h-4" />}>
                 {i18n.nav.initiatives}
               </NavLink>
-              <NavLink href="/epics" icon={<ListTodo className="w-4 h-4" />}>
+              <NavLink href="/deliverables" icon={<ListTodo className="w-4 h-4" />}>
                 {i18n.nav.epics}
               </NavLink>
               <NavLink href="/lighthouse" icon={<Target className="w-4 h-4" />}>
@@ -41,10 +45,28 @@ export default function DashboardLayout({
 }
 
 function NavLink({ href, icon, children }: { href: string; icon: React.ReactNode; children: React.ReactNode }) {
+  const pathname = usePathname();
+  const [actualHref, setActualHref] = useState(href);
+
+  useEffect(() => {
+    // If the link points to a known dashboard, check if there's saved state
+    if (href === '/deliverables') {
+      const savedState = localStorage.getItem('admiral_deliverables_state');
+      if (savedState) {
+        setActualHref(`${href}${savedState}`);
+      }
+    }
+    // Similarly we can expand this to other pages like /initiatives below later
+  }, [href, pathname]);
+
   return (
     <Link
-      href={href}
-      className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+      href={actualHref}
+      className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+        pathname.startsWith(href)
+          ? "text-primary bg-primary/10"
+          : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+      }`}
     >
       {icon}
       {children}

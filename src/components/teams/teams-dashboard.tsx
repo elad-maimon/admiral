@@ -2,7 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { i18n } from '@/lib/i18n';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Plus, Users, UserCog, Edit, History } from 'lucide-react';
 import { InlineEdit } from "@/components/ui/inline-edit";
@@ -13,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { PersonEditModal } from './person-edit-modal';
 
 export function TeamsDashboard() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
   const { data: teams, isLoading: loadingTeams } = useQuery({
@@ -23,9 +26,24 @@ export function TeamsDashboard() {
     }
   });
 
-  const [showHistorical, setShowHistorical] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<string>('all');
+  const [showHistorical, setShowHistorical] = useState(
+    searchParams.get('historical') === 'true'
+  );
+  const [selectedTeam, setSelectedTeam] = useState<string>(
+    searchParams.get('team') || 'all'
+  );
   const [editingPerson, setEditingPerson] = useState<any | null>(null);
+
+  // Sync state to URL and localStorage
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (showHistorical) params.set('historical', 'true');
+    if (selectedTeam !== 'all') params.set('team', selectedTeam);
+
+    const newUrl = `?${params.toString()}`;
+    router.replace(newUrl, { scroll: false });
+    localStorage.setItem('admiral_teams_state', newUrl);
+  }, [showHistorical, selectedTeam, router]);
 
   const { data: people, isLoading: loadingPeople } = useQuery({
     queryKey: ['people', showHistorical],
@@ -153,45 +171,56 @@ export function TeamsDashboard() {
 
   return (
     <div className="space-y-8 pb-12">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <h1 className="text-3xl font-bold tracking-tight">{i18n.nav.teams}</h1>
+      <div className="flex items-center justify-between border-b pb-4">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
+           <Users className="w-6 h-6 text-primary" />
+           {i18n.nav.teams}
+        </h1>
 
-          <div className="flex items-center space-x-2 space-x-reverse bg-white px-4 py-2 rounded-md shadow-sm border">
-            <Switch
-              id="historical_mode"
-              checked={showHistorical}
-              onCheckedChange={setShowHistorical}
-            />
-            <Label htmlFor="historical_mode" className="text-slate-600 font-medium flex items-center gap-1 cursor-pointer">
-              <History className="w-4 h-4 ml-1" />
-              מידע היסטורי
-            </Label>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-2 space-x-reverse bg-slate-100/50 p-1 rounded-md border border-slate-200">
+            <Button
+              variant={!showHistorical ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setShowHistorical(false)}
+              className={!showHistorical ? 'bg-white shadow-sm font-medium' : 'text-slate-500'}
+            >
+              פעילים בלבד
+            </Button>
+            <Button
+              variant={showHistorical ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setShowHistorical(true)}
+              className={showHistorical ? 'bg-white shadow-sm font-medium flex items-center gap-1' : 'text-slate-500 flex items-center gap-1'}
+            >
+              <History className="w-3.5 h-3.5" /> מידע היסטורי
+            </Button>
           </div>
 
           {!showHistorical && (
-            <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-              <SelectTrigger className="w-[180px] bg-white">
-                <SelectValue placeholder="כל הצוותים" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">כל הצוותים</SelectItem>
-                {teams?.map((team: any) => (
-                  <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-                ))}
-                {(filteredPeople || []).filter((p: any) => !p.team_id).length > 0 && (
-                  <SelectItem value="unassigned">ללא קבוצה</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500 font-medium">סינון צוות:</span>
+              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                <SelectTrigger className="w-[180px] bg-white h-9 shadow-sm">
+                  <SelectValue placeholder="כל הצוותים" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">כל הצוותים</SelectItem>
+                  {teams?.map((team: any) => (
+                    <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                  ))}
+                  {(filteredPeople || []).filter((p: any) => !p.team_id).length > 0 && (
+                    <SelectItem value="unassigned">ללא קבוצה</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
           )}
-        </div>
 
-        <div>
           {!showHistorical && (
-            <Button onClick={() => createTeam.mutate()} disabled={createTeam.isPending}>
+            <Button onClick={() => createTeam.mutate()} disabled={createTeam.isPending} className="shadow-sm">
               <Plus className="w-4 h-4 ml-2" />
-              הוסף צוות
+              צוות חדש
             </Button>
           )}
         </div>
@@ -230,7 +259,7 @@ export function TeamsDashboard() {
                       />
                     )}
                     <span className="ml-4 text-xs font-medium text-slate-500 px-2 py-0.5 rounded-full shadow-sm border bg-white">
-                      סה"כ: {team.members.length} {team.members.length > 0 && !showHistorical && `| קיבולת: ${team.capacityCount}`}
+                      סה&quot;כ: {team.members.length} {team.members.length > 0 && !showHistorical && `| קיבולת: ${team.capacityCount}`}
                     </span>
                   </div>
 
