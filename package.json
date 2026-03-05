@@ -10,6 +10,10 @@
     "lint:prettier": "prettier --check .",
     "format": "npm run lint:prettier -- --write"
   },
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=11.0.0"
+  },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -30,7 +34,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.577.0",
-    "next": "14.1.4",
+    "next": "^14.2.35",
     "react": "^18",
     "react-day-picker": "^9.14.0",
     "react-dom": "^18",
@@ -40,16 +44,16 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/node": "^24",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "autoprefixer": "^10.0.1",
-    "eslint": "^8",
-    "eslint-config-next": "14.1.4",
+    "autoprefixer": "^10.4.27",
+    "eslint": "^9",
+    "eslint-config-next": "^16.1.6",
     "eslint-config-prettier": "^10.1.8",
-    "postcss": "^8",
+    "postcss": "^8.5.8",
     "prettier": "^3.8.1",
-    "tailwindcss": "^3.3.0",
-    "typescript": "^5"
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.9.3"
   }
 }
