@@ -9,15 +9,15 @@ Design philosophy: Monday.com-style — inline editing, no dedicated detail page
 
 ## Tech Stack
 
-| Layer | Choice |
-|---|---|
-| Framework | Next.js 14 (App Router, TypeScript) |
-| Styling | Tailwind CSS + shadcn/ui |
-| Database | Supabase (Postgres + Auth + RLS) |
-| Data fetching | Tanstack Query |
-| Gantt | frappe-gantt or react-gantt-task (do NOT build custom SVG) |
-| Charts | Recharts |
-| Hosting | Vercel |
+| Layer         | Choice                                                     |
+| ------------- | ---------------------------------------------------------- |
+| Framework     | Next.js 14 (App Router, TypeScript)                        |
+| Styling       | Tailwind CSS + shadcn/ui                                   |
+| Database      | Supabase (Postgres + Auth + RLS)                           |
+| Data fetching | Tanstack Query                                             |
+| Gantt         | frappe-gantt or react-gantt-task (do NOT build custom SVG) |
+| Charts        | Recharts                                                   |
+| Hosting       | Vercel                                                     |
 
 All backend logic lives in Next.js API Routes (`/api/v1/`). No separate backend service.
 
@@ -38,6 +38,7 @@ All backend logic lives in Next.js API Routes (`/api/v1/`). No separate backend 
 Run tables in the order listed. All primary keys use `gen_random_uuid()`.
 
 ### Conventions
+
 - **Week start:** always **Sunday**. Enforced at API layer.
 - **Month boundary:** stored as **last day of the month** (e.g. `2025-03-31`). Used in `lighthouses.month` and `epics.target_date`.
 - **Derived fields:** never stored. Computed at query time. See Section 4.
@@ -302,6 +303,7 @@ CREATE TABLE milestones (
 Base: `/api/v1/`
 
 **Rules:**
+
 - Mutations return the full updated object.
 - Lists support `?limit=&offset=`.
 - `week_start` and `week_end` fields validated as Sundays on write; reject 400 if not.
@@ -310,6 +312,7 @@ Base: `/api/v1/`
 - Lighthouse item mutations after `status = committed` return **409 Conflict**.
 
 ### Initiatives
+
 ```
 GET    /initiatives              # ?team_id=
 POST   /initiatives
@@ -319,6 +322,7 @@ DELETE /initiatives/:id          # admin only
 ```
 
 ### Epics
+
 ```
 GET    /epics                    # ?initiative_id= &team_id= &planning_status= &importance=
 POST   /epics                    # body may include first_deliverable (creates both atomically)
@@ -328,6 +332,7 @@ DELETE /epics/:id                # admin only
 ```
 
 ### Deliverables
+
 ```
 GET    /deliverables             # ?epic_id= &owner_id= &status= &week_start=
 POST   /deliverables
@@ -340,12 +345,14 @@ DELETE /deliverables/:id/dependencies/:depId
 ```
 
 ### Roadmap
+
 ```
 GET    /roadmap/:year            # all deliverables + epics + milestones for the year
 GET    /roadmap/:year?team_id=   # filtered to one team's initiatives
 ```
 
 ### Lighthouse
+
 ```
 GET    /lighthouses              # list all months, descending
 POST   /lighthouses              # body: { month, title }
@@ -362,6 +369,7 @@ DELETE /lighthouses/:id/items/:itemId  # 409 if committed
 ```
 
 ### Teams & People
+
 ```
 GET    /teams
 POST   /teams
@@ -378,6 +386,7 @@ DELETE /people/:id/unavailability/:id
 ```
 
 ### OKRs
+
 ```
 GET    /objectives
 POST   /objectives
@@ -391,6 +400,7 @@ DELETE /key-results/:id
 ```
 
 ### Milestones
+
 ```
 GET    /milestones               # ?initiative_id= (omit → all incl. org-level)
 POST   /milestones
@@ -412,6 +422,7 @@ Expand rows to see children. Edit in place. Modals only for create flows. Compac
 **Purpose:** See all work grouped by team. No status filtering (initiatives have no status field).
 
 **Header:**
+
 - Filter: Team (dropdown)
 - `+ New Initiative` button (top right)
 
@@ -434,6 +445,7 @@ Expand rows to see children. Edit in place. Modals only for create flows. Compac
 ```
 
 **Clicking a row** → expands inline to show its epic list:
+
 ```
   ▼ Auth Revamp
     ┌──────────────────────────────────────────────────────────────┐
@@ -455,6 +467,7 @@ All fields editable inline (title, owner, target date).
 **Purpose:** Primary day-to-day execution view. Manage epics and their deliverables.
 
 **Header:**
+
 - Filters: Initiative (dropdown), Team (dropdown), Planning Status (dropdown), Importance (dropdown)
 - `+ New Epic` button (top right)
 
@@ -496,6 +509,7 @@ Perf Opt      ▶  DB Query Optimization  Sam     High        May 31   ██░
 **Purpose:** Monthly commitment planning and stakeholder communication.
 
 **Header:**
+
 - Month picker (defaults to current month)
 - Status badge: Draft / Committed / Closed
 - `Commit` button (admin only; disabled after commit)
@@ -504,11 +518,13 @@ Perf Opt      ▶  DB Query Optimization  Sam     High        May 31   ██░
 - Toggle: **Edit mode** | **Stakeholder view**
 
 **Carry-over banner** (shown on new draft when previous month had incomplete items):
+
 ```
 ⚠️  2 items not completed in February.  [Review & add to this month →]
 ```
 
 **Main table:**
+
 ```
 #  │ Deliverable           │ Feature Lead │ Feature Team    │ Status    │ 🔒
 ───┼───────────────────────┼──────────────┼─────────────────┼───────────┼────
@@ -526,11 +542,13 @@ Perf Opt      ▶  DB Query Optimization  Sam     High        May 31   ██░
 - `+ Add Deliverable` → search modal across all deliverables
 
 **Footer:**
+
 ```
 Completion: 1/4  (25%)   |   Internal: 1 item hidden   |   Slippage from Feb: 2 items
 ```
 
 **Stakeholder view** (`?view=stakeholder` — no auth required):
+
 - Internal items hidden, no edit controls, no 🔒 column
 
 ---
@@ -540,11 +558,13 @@ Completion: 1/4  (25%)   |   Internal: 1 item hidden   |   Slippage from Feb: 2 
 **Purpose:** Yearly Gantt across all teams.
 
 **Header:**
+
 - Year picker (defaults to current year)
 - Filter: Team (dropdown)
 - Toggle: Deliverables | Epics only
 
 **Layout:**
+
 ```
                     │ W1    W2    W3    W4    W5    W6    W7    W8 ...
                     │              ░░░░░░                             ← red/amber column = team over-capacity
@@ -560,6 +580,7 @@ ORG LEVEL           │
 ```
 
 **Bar encoding:**
+
 - Width = `planned_week_end − planned_week_start` (user-defined span)
 - Height = derived from implied_people — 3 levels:
   - small: 1 person implied
@@ -572,19 +593,23 @@ ORG LEVEL           │
 - Dependency arrows between deliverables; dashed red if unmet
 
 **Team over-capacity column bands:**
+
 - When `team_assigned > team_capacity` for a given week, that week column is highlighted
   with a red/amber tint across the full swimlane height of that team's section.
 - Visible at a glance which weeks have a resource crunch without pointing at individuals.
 
 **Milestones:**
+
 - 🚩 flag at `milestone.date`; red/orange if `status = at_risk`
 - Click → popover: title, status, description
 
 **Interactions:**
+
 - Hover → tooltip with title, owner, status, estimate, dates, implied team size
 - Click → slide-in edit panel (not a new page)
 
 **Swimlane layout:**
+
 - Team column on left: narrow, rotated text
 - Initiative swimlanes nested within each team section
 - Epics within same initiative share the same color family
@@ -596,11 +621,13 @@ ORG LEVEL           │
 **Purpose:** Team composition, weekly capacity vs assigned work.
 
 **Header:**
+
 - Team filter (dropdown: "All Teams" or one team)
 - Date range (defaults to current month + 2 months)
 - `+ Add Person` button
 
 **Weekly capacity grid:**
+
 ```
 Member     Role     W1 Mar   W2 Mar   W3 Mar   W4 Mar   W1 Apr ...
 ──────────────────────────────────────────────────────────────────
@@ -619,6 +646,7 @@ Capacity            15d      15d      10d      10d
 - `counts_toward_capacity = FALSE` → row muted, excluded from Team Total
 
 **People panel** (below grid):
+
 - Toggle `counts_toward_capacity` inline
 - `+ Vacation week` → Sunday-constrained week picker
 - Join/leave dates shown as annotations
@@ -1047,33 +1075,34 @@ GANTT LIBRARY
   excellent Hebrew rendering).
 
 LANGUAGE RULES:
-  - UI language is Hebrew.
-  - The following terms stay in English (no translation):
-      Epic, Deliverable, Lighthouse, Initiative, Roadmap, Backlog, RFD, Feature Lead, Feature Team, Owner, DoD, Active, Scoping, Cancelled, Closed, Blocked, In Dev, Done, Capacity
-  - Everything else is Hebrew. Examples:
-      Team       → צוות
-      People     → אנשים
-      Status     → סטטוס
-      Committed  → התחייבות
-      Strategic  → אסטרטגי
-      High       → גבוה
-      Planned    → מתוכנן
-      Target     → יעד
-      Delay      → עיכוב
-      Week       → שבוע
-      Month      → חודש
-      Progress   → התקדמות
-      Save       → שמור
-      Cancel     → ביטול
-      Add        → הוסף
-      Edit       → ערוך
-      Delete     → מחק
-      Share      → שתף
-      Export     → ייצוא
-      Commit     → אשר
-      Search     → חיפוש
 
-  Store all display strings in a single `lib/i18n.ts` constants file.
-  Keep also the terms that stay in English in the same file with the English value.
-  Do not hardcode Hebrew strings in components — always import from i18n.ts.
-  This makes future edits easy without hunting through components.
+- UI language is Hebrew.
+- The following terms stay in English (no translation):
+  Epic, Deliverable, Lighthouse, Initiative, Roadmap, Backlog, RFD, Feature Lead, Feature Team, Owner, DoD, Active, Scoping, Cancelled, Closed, Blocked, In Dev, Done, Capacity
+- Everything else is Hebrew. Examples:
+  Team → צוות
+  People → אנשים
+  Status → סטטוס
+  Committed → התחייבות
+  Strategic → אסטרטגי
+  High → גבוה
+  Planned → מתוכנן
+  Target → יעד
+  Delay → עיכוב
+  Week → שבוע
+  Month → חודש
+  Progress → התקדמות
+  Save → שמור
+  Cancel → ביטול
+  Add → הוסף
+  Edit → ערוך
+  Delete → מחק
+  Share → שתף
+  Export → ייצוא
+  Commit → אשר
+  Search → חיפוש
+
+Store all display strings in a single `lib/i18n.ts` constants file.
+Keep also the terms that stay in English in the same file with the English value.
+Do not hardcode Hebrew strings in components — always import from i18n.ts.
+This makes future edits easy without hunting through components.

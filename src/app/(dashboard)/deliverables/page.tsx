@@ -1,10 +1,10 @@
-import { Suspense } from "react";
-import { EpicsDashboard } from "@/components/deliverables/deliverables-dashboard";
+import { Suspense } from 'react'
+import { EpicsDashboard } from '@/components/deliverables/deliverables-dashboard'
 
 export default function DeliverablesPage() {
   return (
-    <Suspense fallback={<div className="p-8 animate-pulse text-center">Loading...</div>}>
+    <Suspense fallback={<div className='p-8 animate-pulse text-center'>Loading...</div>}>
       <EpicsDashboard />
     </Suspense>
-  );
+  )
 }

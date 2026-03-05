@@ -1,31 +1,29 @@
-import type { Metadata } from "next";
-import { Assistant } from "next/font/google";
-import "./globals.css";
-import { QueryProvider } from "@/components/providers/query-provider";
+import type { Metadata } from 'next'
+import { Assistant } from 'next/font/google'
+import './globals.css'
+import { QueryProvider } from '@/components/providers/query-provider'
 
-const font = Assistant({ subsets: ["hebrew", "latin"] });
+const font = Assistant({ subsets: ['hebrew', 'latin'] })
 
 export const metadata: Metadata = {
-  title: "Admiral - Product Management System",
-  description: "Internal product management system connecting business goals to product execution.",
-};
+  title: 'Admiral - Product Management System',
+  description: 'Internal product management system connecting business goals to product execution.'
+}
 
-import { DirectionProvider } from '@/components/providers/direction-provider';
+import { DirectionProvider } from '@/components/providers/direction-provider'
 
 export default function RootLayout({
-  children,
+  children
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
-    <html lang="he" dir="rtl">
+    <html lang='he' dir='rtl'>
       <body className={font.className}>
         <DirectionProvider>
-          <QueryProvider>
-            {children}
-          </QueryProvider>
+          <QueryProvider>{children}</QueryProvider>
         </DirectionProvider>
       </body>
     </html>
-  );
+  )
 }
