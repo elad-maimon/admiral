@@ -65,7 +65,7 @@ CREATE TABLE key_results (
 -- INITIATIVES
 -- ─────────────────────────────────────────────────────────
 CREATE TABLE initiatives (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id           SERIAL PRIMARY KEY,
   title        TEXT NOT NULL,
   description  TEXT,
   objective_id UUID REFERENCES objectives(id) ON DELETE SET NULL,
@@ -79,7 +79,7 @@ CREATE TABLE initiatives (
 -- ─────────────────────────────────────────────────────────
 CREATE TABLE epics (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  initiative_id    UUID NOT NULL REFERENCES initiatives(id) ON DELETE CASCADE,
+  initiative_id    INTEGER NOT NULL REFERENCES initiatives(id) ON DELETE CASCADE,
   title            TEXT NOT NULL,
   description      TEXT,
   owner_id         UUID REFERENCES people(id),
@@ -162,7 +162,7 @@ CREATE TABLE lighthouse_items (
 -- ─────────────────────────────────────────────────────────
 CREATE TABLE milestones (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  initiative_id  UUID REFERENCES initiatives(id) ON DELETE SET NULL,
+  initiative_id  INTEGER REFERENCES initiatives(id) ON DELETE SET NULL,
   title          TEXT NOT NULL,
   date           DATE NOT NULL,
   description    TEXT,
