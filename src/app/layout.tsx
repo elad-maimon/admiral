@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: "Internal product management system connecting business goals to product execution.",
 };
 
+import { DirectionProvider } from '@/components/providers/direction-provider';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -18,9 +20,11 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl">
       <body className={font.className}>
-        <QueryProvider>
-          {children}
-        </QueryProvider>
+        <DirectionProvider>
+          <QueryProvider>
+            {children}
+          </QueryProvider>
+        </DirectionProvider>
       </body>
     </html>
   );
