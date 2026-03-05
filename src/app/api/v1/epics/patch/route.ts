@@ -5,9 +5,7 @@ export async function PATCH(request: Request) {
   const supabase = createClient();
   try {
     const { id, updates } = await request.json();
-    if (!id || !updates) {
-      return NextResponse.json({ error: 'Missing id or updates' }, { status: 400 });
-    }
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
     const { data, error } = await supabase
       .from('epics')
@@ -16,10 +14,7 @@ export async function PATCH(request: Request) {
       .select()
       .single();
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
+    if (error) throw error;
     return NextResponse.json(data);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

@@ -12,7 +12,7 @@ export default function DashboardLayout({
       <header className="border-b bg-white top-0 sticky z-50">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <h1 className="font-bold text-xl tracking-tight text-primary">Admiral</h1>
+            <h1 className="font-bold text-xl tracking-tight text-primary">אדמירל</h1>
             <nav className="hidden md:flex items-center gap-2">
               <NavLink href="/initiatives" icon={<LayoutDashboard className="w-4 h-4" />}>
                 {i18n.nav.initiatives}
