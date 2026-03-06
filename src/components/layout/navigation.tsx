@@ -56,8 +56,8 @@ function NavLink({ href, icon, children }: { href: string; icon: React.ReactNode
       href={actualHref}
       className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
         pathname.startsWith(href)
-          ? 'text-primary bg-primary/10'
-          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          ? 'text-white bg-blue-800/80 shadow-sm'
+          : 'text-blue-200 hover:text-white hover:bg-blue-800/40'
       }`}
     >
       {icon}
