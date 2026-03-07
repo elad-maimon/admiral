@@ -5,18 +5,24 @@ import { i18n } from '@/lib/i18n'
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Plus, Users, UserCog, Edit, History } from 'lucide-react'
+import { Plus, Users, UserCog, Edit, History, AlertCircle } from 'lucide-react'
 import { InlineEdit } from '@/components/ui/inline-edit'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { PersonEditModal } from './person-edit-modal'
+import { PendingRequestsModal } from './pending-requests-modal'
 
 export function TeamsDashboard() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const queryClient = useQueryClient()
+
+  const [showHistorical, setShowHistorical] = useState(searchParams.get('historical') === 'true')
+  const [selectedTeam, setSelectedTeam] = useState<string>(searchParams.get('team') || 'all')
+  const [editingPerson, setEditingPerson] = useState<any | null>(null)
+  const [isPendingModalOpen, setIsPendingModalOpen] = useState(false)
 
   const { data: teams, isLoading: loadingTeams } = useQuery({
     queryKey: ['teams'],
@@ -26,9 +32,14 @@ export function TeamsDashboard() {
     }
   })
 
-  const [showHistorical, setShowHistorical] = useState(searchParams.get('historical') === 'true')
-  const [selectedTeam, setSelectedTeam] = useState<string>(searchParams.get('team') || 'all')
-  const [editingPerson, setEditingPerson] = useState<any | null>(null)
+  // Only Admins will get data back from this endpoint due to RLS
+  const { data: pendingRequests } = useQuery({
+    queryKey: ['pending_requests'],
+    queryFn: async () => {
+      const res = await fetch('/api/v1/join-requests')
+      return res.json()
+    }
+  })
 
   // Sync state to URL and localStorage
   useEffect(() => {
@@ -231,6 +242,28 @@ export function TeamsDashboard() {
       </div>
 
       <div className='border bg-white shadow-sm rounded-md overflow-hidden'>
+        {pendingRequests && pendingRequests.length > 0 && !showHistorical && (
+          <div className='bg-amber-50 border-b border-amber-200 p-4 px-6 flex items-center justify-between'>
+            <div className='flex items-center gap-3'>
+              <div className='p-2 bg-amber-100 rounded-full text-amber-600'>
+                <AlertCircle className='w-5 h-5' />
+              </div>
+              <div>
+                <div className='font-bold text-amber-900'>בקשות הצטרפות ממתינות</div>
+                <div className='text-sm text-amber-700 font-medium'>
+                  ישנן {pendingRequests.length} בקשות הצטרפות שממתינות לאישור הנהלה.
+                </div>
+              </div>
+            </div>
+            <Button
+              onClick={() => setIsPendingModalOpen(true)}
+              className='bg-amber-600 hover:bg-amber-700 text-white border-transparent'
+            >
+              נהל בקשות
+            </Button>
+          </div>
+        )}
+
         {/* Table Header: Name, Role, Capacity, Join, Leave, Actions */}
         <div className='grid grid-cols-[minmax(180px,1fr)_120px_80px_100px_100px_60px] gap-4 p-3 bg-slate-50 border-b font-semibold text-slate-600 text-sm pl-4 pr-6'>
           <div>שם</div>
@@ -359,6 +392,16 @@ export function TeamsDashboard() {
         onSave={(id: string, updates: any) => updatePerson.mutate({ id, updates })}
         teams={teams || []}
       />
+
+      {pendingRequests && teams && (
+        <PendingRequestsModal
+          isOpen={isPendingModalOpen}
+          onClose={() => setIsPendingModalOpen(false)}
+          requests={pendingRequests}
+          teams={teams}
+          people={filteredPeople}
+        />
+      )}
     </div>
   )
 }

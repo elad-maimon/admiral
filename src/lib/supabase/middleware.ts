@@ -32,26 +32,51 @@ export async function updateSession(request: NextRequest) {
     data: { user }
   } = await supabase.auth.getUser()
 
+  // Check if user exists in the people table (Organization authorization)
+  let isAuthorized = false
+  if (user) {
+    const { data: person } = await supabase.from('people').select('id').eq('auth_user_id', user.id).single()
+
+    isAuthorized = !!person
+
+    // If not found by auth_user_id, try linking via email in case the profile was created before or after signup
+    if (!isAuthorized) {
+      await supabase.rpc('link_my_people_record')
+
+      const { data: linkedPerson } = await supabase.from('people').select('id').eq('auth_user_id', user.id).single()
+
+      isAuthorized = !!linkedPerson
+    }
+  }
+
   // Protect all non-auth routes
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/auth')
+  const isUnauthorizedRoute = request.nextUrl.pathname.startsWith('/unauthorized')
   const isPublicAsset = request.nextUrl.pathname.match(/\.(.*)$/)
 
-  if (!user && !isAuthRoute && !isPublicAsset) {
-    // Redirect unauthenticated users to login page
+  // 1. Unauthenticated users wanting protected resources -> Login
+  if (!user && !isAuthRoute && !isPublicAsset && !isUnauthorizedRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  if (user && request.nextUrl.pathname === '/login') {
-    // Redirect authenticated users away from login page
+  // 2. Authenticated but Unauthorized users wanting protected resources -> Unauthorized page
+  if (user && !isAuthorized && !isAuthRoute && !isUnauthorizedRoute && !isPublicAsset) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/unauthorized'
+    return NextResponse.redirect(url)
+  }
+
+  // 3. Authorized users trying to visit Login or Unauthorized pages -> Dashboard
+  if (user && isAuthorized && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/unauthorized')) {
     const url = request.nextUrl.clone()
     url.pathname = '/initiatives' // Default dashboard route
     return NextResponse.redirect(url)
   }
 
-  // Allow access to root if they are just loading it (they will be redirected to /initiatives client-side if needed, but let's just do it here)
-  if (user && request.nextUrl.pathname === '/') {
+  // 4. Authorized users at the root -> Dashboard
+  if (user && isAuthorized && request.nextUrl.pathname === '/') {
     const url = request.nextUrl.clone()
     url.pathname = '/initiatives'
     return NextResponse.redirect(url)

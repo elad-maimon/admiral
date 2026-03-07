@@ -25,8 +25,10 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${next}`)
       }
     } else {
-      console.error("Code exchange error:", error?.message || "No session returned")
-      return NextResponse.redirect(`${origin}/login?error=auth-code-error&details=${encodeURIComponent(error?.message || 'no-session')}`)
+      console.error('Code exchange error:', error?.message || 'No session returned')
+      return NextResponse.redirect(
+        `${origin}/login?error=auth-code-error&details=${encodeURIComponent(error?.message || 'no-session')}`
+      )
     }
   }
 

@@ -5,7 +5,9 @@ import Image from 'next/image'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user }
+  } = await supabase.auth.getUser()
 
   return (
     <div className='min-h-screen bg-slate-50 flex flex-col'>
@@ -17,9 +19,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </div>
             <Navigation />
           </div>
-          <div className='flex items-center gap-4'>
-            {user && <UserMenu user={user} />}
-          </div>
+          <div className='flex items-center gap-4'>{user && <UserMenu user={user} />}</div>
         </div>
       </header>
       <main className='flex-1 container mx-auto px-4 py-8'>{children}</main>
