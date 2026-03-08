@@ -11,51 +11,72 @@ export function PersonEditModal({
   isOpen,
   onClose,
   onSave,
+  onCreate,
   teams
 }: {
   person: any | null
   isOpen: boolean
   onClose: () => void
   onSave: (id: string, updates: any) => void
+  onCreate: (updates: any) => void
   teams: any[]
 }) {
   const [formData, setFormData] = useState<any>({})
 
   useEffect(() => {
     if (person) {
-      setFormData({
-        name: person.name || '',
-        role: person.role || 'other',
-        permission: person.permission || 'viewer',
-        team_id: person.team_id || null,
-        counts_toward_capacity: person.counts_toward_capacity ?? true,
-        active: person.active ?? true,
-        join_date: person.join_date || '',
-        leave_date: person.leave_date || ''
-      })
+      if (person.isNew) {
+        setFormData({
+          name: '',
+          role: 'eng',
+          permission: 'member',
+          team_id: null,
+          counts_toward_capacity: true,
+          active: true,
+          join_date: new Date().toISOString().split('T')[0],
+          leave_date: null
+        })
+      } else {
+        setFormData({
+          name: person.name || '',
+          role: person.role || 'other',
+          permission: person.permission || 'viewer',
+          team_id: person.team_id || null,
+          counts_toward_capacity: person.counts_toward_capacity ?? true,
+          active: person.active ?? true,
+          join_date: person.join_date || null,
+          leave_date: person.leave_date || null
+        })
+      }
     }
   }, [person])
 
   if (!person) return null
 
+  const isNew = person.isNew
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(person.id, formData)
+    if (isNew) {
+      onCreate(formData)
+    } else {
+      onSave(person.id, formData)
+    }
     onClose()
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
-      <DialogContent className='sm:max-w-[425px]'>
+      <DialogContent className='sm:max-w-[425px]' dir='rtl'>
         <DialogHeader>
-          <DialogTitle>ערוך פרטי אדם</DialogTitle>
+          <DialogTitle>{isNew ? 'הוסף אדם חדש' : 'ערוך פרטי אדם'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className='space-y-4 pt-4'>
           <div className='grid grid-cols-4 items-center gap-4'>
             <Label className='text-right'>שם</Label>
             <Input
-              className='col-span-3 text-right'
-              value={formData.name}
+              className='col-span-3'
+              value={formData.name || ''}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
               required
             />
@@ -102,7 +123,7 @@ export function PersonEditModal({
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value='none'>ללא צוות</SelectItem>
+                <SelectItem value='none'>{'[מדורי]'}</SelectItem>
                 {teams.map(t => (
                   <SelectItem key={t.id} value={t.id}>
                     {t.name}
@@ -116,8 +137,9 @@ export function PersonEditModal({
             <Label className='text-right'>תאריך הצטרפות</Label>
             <Input
               type='date'
-              className='col-span-3 text-right'
-              value={formData.join_date}
+              className='col-span-3 justify-between flex-row-reverse'
+              lang='he-IL'
+              value={formData.join_date || ''}
               onChange={e => setFormData({ ...formData, join_date: e.target.value || null })}
             />
           </div>
@@ -126,22 +148,23 @@ export function PersonEditModal({
             <Label className='text-right'>תאריך עזיבה</Label>
             <Input
               type='date'
-              className='col-span-3 text-right'
-              value={formData.leave_date}
+              lang='he-IL'
+              className='col-span-3 justify-between flex-row-reverse'
+              value={formData.leave_date || ''}
               onChange={e => setFormData({ ...formData, leave_date: e.target.value || null })}
             />
           </div>
 
-          <div className='flex items-center space-x-2 space-x-reverse mt-2'>
+          <div className='flex items-center gap-2 mt-2'>
             <Checkbox
               id='counts_cap'
               checked={formData.counts_toward_capacity}
               onCheckedChange={checked => setFormData({ ...formData, counts_toward_capacity: checked === true })}
             />
-            <Label htmlFor='counts_cap'>נספר בחישוב קיבולת למחזור</Label>
+            <Label htmlFor='counts_cap'>נספר בחישוב ל-capacity</Label>
           </div>
 
-          <div className='flex items-center space-x-2 space-x-reverse mt-2'>
+          <div className='flex items-center gap-2 mt-2'>
             <Checkbox
               id='is_active'
               checked={formData.active}
@@ -150,11 +173,11 @@ export function PersonEditModal({
             <Label htmlFor='is_active'>פעיל (משתמש היסטורי אם כבוי)</Label>
           </div>
 
-          <DialogFooter className='mt-6'>
+          <DialogFooter className='mt-6 gap-2'>
             <Button type='button' variant='outline' onClick={onClose}>
               ביטול
             </Button>
-            <Button type='submit'>שמור</Button>
+            <Button type='submit'>{isNew ? 'הוסף' : 'שמור'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

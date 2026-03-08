@@ -257,7 +257,7 @@ function ApproveForm({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='unassigned'>ללא צוות</SelectItem>
+                  <SelectItem value='unassigned'>{'[מדורי]'}</SelectItem>
                   {teams.map(t => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.name}
