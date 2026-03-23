@@ -2,19 +2,19 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { i18n } from '@/lib/i18n'
-import { useState, useEffect } from 'react'
+import { ReactNode, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Plus, Users, UserCog, Edit, History, AlertCircle, Trash2 } from 'lucide-react'
 import { InlineEdit } from '@/components/ui/inline-edit'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { PersonEditModal } from './person-edit-modal'
+import { PersonEditModal, EditingPersonType } from './person-edit-modal'
 import { PendingRequestsModal } from './pending-requests-modal'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Person, PersonInsert, PersonUpdate, Team, TeamUpdate } from '@/types'
 
 export function TeamsDashboard() {
   const router = useRouter()
@@ -23,15 +23,15 @@ export function TeamsDashboard() {
 
   const [showHistorical, setShowHistorical] = useState(searchParams.get('historical') === 'true')
   const [selectedTeam, setSelectedTeam] = useState<string>(searchParams.get('team') || 'all')
-  const [editingPerson, setEditingPerson] = useState<any | null>(null)
+  const [editingPerson, setEditingPerson] = useState<EditingPersonType | null>(null)
   const [isPendingModalOpen, setIsPendingModalOpen] = useState(false)
   const [isAddTeamModalOpen, setIsAddTeamModalOpen] = useState(false)
   const [newTeamName, setNewTeamName] = useState('')
-  const [teamToDelete, setTeamToDelete] = useState<any | null>(null)
-  const [personToDelete, setPersonToDelete] = useState<any | null>(null)
+  const [teamToDelete, setTeamToDelete] = useState<(Team & { members?: Person[] }) | null>(null)
+  const [personToDelete, setPersonToDelete] = useState<Person | null>(null)
   const [deletePersonError, setDeletePersonError] = useState<string | null>(null)
 
-  const { data: teams, isLoading: loadingTeams } = useQuery({
+  const { data: teams, isLoading: loadingTeams } = useQuery<Team[]>({
     queryKey: ['teams'],
     queryFn: async () => {
       const res = await fetch('/api/v1/teams')
@@ -59,7 +59,7 @@ export function TeamsDashboard() {
     localStorage.setItem('admiral_teams_state', newUrl)
   }, [showHistorical, selectedTeam, router])
 
-  const { data: people, isLoading: loadingPeople } = useQuery({
+  const { data: people, isLoading: loadingPeople } = useQuery<Person[]>({
     queryKey: ['people', showHistorical],
     queryFn: async () => {
       const activeParam = showHistorical ? '?active=none' : ''
@@ -86,7 +86,7 @@ export function TeamsDashboard() {
   })
 
   const updateTeam = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: TeamUpdate }) => {
       const res = await fetch('/api/v1/teams/patch', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -109,7 +109,7 @@ export function TeamsDashboard() {
   })
 
   const createPerson = useMutation({
-    mutationFn: async (personData: any) => {
+    mutationFn: async (personData: PersonInsert) => {
       const res = await fetch('/api/v1/people', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -122,7 +122,7 @@ export function TeamsDashboard() {
   })
 
   const updatePerson = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: PersonUpdate }) => {
       const res = await fetch('/api/v1/people/patch', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -160,7 +160,12 @@ export function TeamsDashboard() {
   // We don't filter people array here anymore since the API does it.
   const filteredPeople = people || []
 
-  let peopleByTeam: any[] = []
+  let peopleByTeam: (Team & {
+    members: Person[]
+    capacityCount: number
+    isUnassigned?: boolean
+    isHistoricalWrapper?: boolean
+  })[] = []
 
   if (showHistorical) {
     peopleByTeam = [
@@ -169,27 +174,28 @@ export function TeamsDashboard() {
         name: 'כל היסטוריית המשתמשים',
         members: filteredPeople,
         capacityCount: 0,
-        isHistoricalWrapper: true
+        isHistoricalWrapper: true,
+        created_at: null
       }
     ]
   } else {
-    peopleByTeam = (teams || []).map((team: any) => {
+    peopleByTeam = (teams || []).map(team => {
       const members = filteredPeople
-        .filter((p: any) => p.team_id === team.id)
-        .sort((a: any, b: any) => {
+        .filter(p => p.team_id === team.id)
+        .sort((a, b) => {
           const roleWeight: Record<string, number> = { manager: 1, product: 2, eng: 3, other: 4 }
           const wA = roleWeight[a.role || 'other'] || 5
           const wB = roleWeight[b.role || 'other'] || 5
           if (wA !== wB) return wA - wB
           return (a.name || '').localeCompare(b.name || '', 'he')
         })
-      const capacityCount = members.filter((m: any) => m.counts_toward_capacity).length
+      const capacityCount = members.filter((m: Person) => m.counts_toward_capacity).length
       return { ...team, members, capacityCount }
     })
 
     const unassignedMembers = filteredPeople
-      .filter((p: any) => !p.team_id)
-      .sort((a: any, b: any) => {
+      .filter(p => !p.team_id)
+      .sort((a, b) => {
         const roleWeight: Record<string, number> = { manager: 1, product: 2, eng: 3, other: 4 }
         const wA = roleWeight[a.role || 'other'] || 5
         const wB = roleWeight[b.role || 'other'] || 5
@@ -202,13 +208,14 @@ export function TeamsDashboard() {
         id: 'unassigned',
         name: '[מדורי]',
         members: unassignedMembers,
-        capacityCount: unassignedMembers.filter((m: any) => m.counts_toward_capacity).length,
-        isUnassigned: true
+        capacityCount: unassignedMembers.filter(m => m.counts_toward_capacity).length,
+        isUnassigned: true,
+        created_at: null
       })
     }
 
     if (selectedTeam !== 'all') {
-      peopleByTeam = peopleByTeam.filter((t: any) => t.id === selectedTeam)
+      peopleByTeam = peopleByTeam.filter(t => t.id === selectedTeam)
     }
   }
 
@@ -226,7 +233,7 @@ export function TeamsDashboard() {
     other: 'אחר'
   }
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
     if (!dateString) return '-'
     // Handle Supabase DATE string format YYYY-MM-DD
     return new Date(dateString).toLocaleDateString('he-IL')
@@ -274,10 +281,10 @@ export function TeamsDashboard() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value='all'>כל הצוותים</SelectItem>
-                    {(filteredPeople || []).filter((p: any) => !p.team_id).length > 0 && (
+                    {(filteredPeople || []).filter(p => !p.team_id).length > 0 && (
                       <SelectItem value='unassigned'>{'[מדורי]'}</SelectItem>
                     )}
-                    {teams?.map((team: any) => (
+                    {teams?.map(team => (
                       <SelectItem key={team.id} value={team.id}>
                         {team.name}
                       </SelectItem>
@@ -344,7 +351,7 @@ export function TeamsDashboard() {
           {peopleByTeam.length === 0 ? (
             <div className='p-8 text-center text-slate-500 italic'>אין צוותים או אנשים מתאימים לפילטרים.</div>
           ) : (
-            peopleByTeam.map((team: any) => (
+            peopleByTeam.map(team => (
               <div key={team.id} className='group/team'>
                 {/* Group Header */}
                 {!showHistorical && (
@@ -392,7 +399,7 @@ export function TeamsDashboard() {
                       אין אנשים משויכים עדיין.
                     </div>
                   ) : (
-                    team.members.map((person: any) => {
+                    team.members.map((person: Person) => {
                       const now = new Date()
                       now.setHours(0, 0, 0, 0)
                       let isFuture = false
@@ -496,9 +503,9 @@ export function TeamsDashboard() {
         person={editingPerson}
         isOpen={!!editingPerson}
         onClose={() => setEditingPerson(null)}
-        onSave={(id: string, updates: any) => updatePerson.mutate({ id, updates })}
+        onSave={(id: string, updates: PersonUpdate) => updatePerson.mutate({ id, updates })}
         teams={teams || []}
-        onCreate={(updates: any) => createPerson.mutate(updates)}
+        onCreate={(updates: PersonInsert) => createPerson.mutate(updates)}
       />
 
       <Dialog open={isAddTeamModalOpen} onOpenChange={open => !open && setIsAddTeamModalOpen(false)}>
@@ -542,7 +549,7 @@ export function TeamsDashboard() {
             <DialogTitle>מחיקת צוות</DialogTitle>
           </DialogHeader>
           <div className='py-4'>
-            {teamToDelete?.members?.length > 0 ? (
+            {teamToDelete && teamToDelete.members && teamToDelete.members.length > 0 ? (
               <p className='text-slate-600'>
                 לא ניתן למחוק את הצוות &quot;{teamToDelete.name}&quot; מכיוון שיש בו חברי מחלקה משויכים. כדי למחוק את
                 הצוות, יש להעביר קודם את חברי הצוות לצוות אחר או להסיר אותם.
@@ -627,7 +634,7 @@ export function TeamsDashboard() {
                 למסך עריכה
               </Button>
             )}
-            {!deletePersonError && (
+            {!deletePersonError && personToDelete && (
               <Button
                 variant='destructive'
                 onClick={() => deletePerson.mutate(personToDelete.id)}

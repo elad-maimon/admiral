@@ -1,10 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { Person, PersonUpdate } from '@/types'
 
 export async function PATCH(request: Request) {
   const supabase = createClient()
   try {
-    const { id, updates } = await request.json()
+    const body = await request.json()
+    const id = body.id as string
+    const updates = body.updates as PersonUpdate
+
     if (!id || !updates) {
       return NextResponse.json({ error: 'Missing id or updates' }, { status: 400 })
     }

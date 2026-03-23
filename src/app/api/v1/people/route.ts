@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { Person, PersonInsert } from '@/types'
 
 export async function GET(request: Request) {
   const supabase = createClient()
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const supabase = createClient()
   try {
-    const body = await request.json()
+    const body: PersonInsert = await request.json()
     if (!body.name) return NextResponse.json({ error: 'Missing name' }, { status: 400 })
 
     const { data, error } = await supabase.from('people').insert([body]).select().single()

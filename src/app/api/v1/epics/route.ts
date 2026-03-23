@@ -21,9 +21,9 @@ export async function GET(request: NextRequest) {
     )
     .order('created_at', { ascending: false })
 
-  if (initiativeId) query = query.eq('initiative_id', initiativeId)
+  if (initiativeId) query = query.eq('initiative_id', parseInt(initiativeId, 10))
   if (planningStatus) query = query.eq('planning_status', planningStatus)
-  if (importance) query = query.eq('importance', parseInt(importance))
+  if (importance) query = query.eq('importance', parseInt(importance, 10))
 
   const { data, error } = await query
 

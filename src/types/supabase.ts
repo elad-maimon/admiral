@@ -225,6 +225,33 @@ export type Database = {
           }
         ]
       }
+      join_requests: {
+        Row: {
+          attempts: number
+          auth_user_id: string
+          created_at: string
+          id: string
+          status: Database['public']['Enums']['join_request_status']
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          auth_user_id: string
+          created_at?: string
+          id?: string
+          status?: Database['public']['Enums']['join_request_status']
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          auth_user_id?: string
+          created_at?: string
+          id?: string
+          status?: Database['public']['Enums']['join_request_status']
+          updated_at?: string
+        }
+        Relationships: []
+      }
       key_results: {
         Row: {
           created_at: string | null
@@ -514,10 +541,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_pending_join_requests: {
+        Args: never
+        Returns: {
+          attempts: number
+          auth_user_id: string
+          created_at: string
+          email: string
+          id: string
+          name: string
+          status: Database['public']['Enums']['join_request_status']
+          updated_at: string
+        }[]
+      }
       get_user_role: { Args: never; Returns: string }
+      link_my_people_record: { Args: never; Returns: undefined }
     }
     Enums: {
-      [_ in never]: never
+      join_request_status: 'pending' | 'approved' | 'declined'
     }
     CompositeTypes: {
       [_ in never]: never
@@ -639,6 +680,8 @@ export const Constants = {
     Enums: {}
   },
   public: {
-    Enums: {}
+    Enums: {
+      join_request_status: ['pending', 'approved', 'declined']
+    }
   }
 } as const

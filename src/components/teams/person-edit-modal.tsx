@@ -5,6 +5,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { validateFormData } from '@/lib/utils'
+import { Person, PersonInsert, PersonUpdate, Team } from '@/types'
+
+export type EditingPersonType = Person | { isNew: true }
 
 export function PersonEditModal({
   person,
@@ -14,18 +18,18 @@ export function PersonEditModal({
   onCreate,
   teams
 }: {
-  person: any | null
+  person: EditingPersonType | null
   isOpen: boolean
   onClose: () => void
-  onSave: (id: string, updates: any) => void
-  onCreate: (updates: any) => void
-  teams: any[]
+  onSave: (id: string, updates: PersonUpdate) => void
+  onCreate: (updates: PersonInsert) => void
+  teams: Team[]
 }) {
-  const [formData, setFormData] = useState<any>({})
+  const [formData, setFormData] = useState<Partial<PersonInsert>>({})
 
   useEffect(() => {
     if (person) {
-      if (person.isNew) {
+      if ('isNew' in person) {
         setFormData({
           name: '',
           role: 'eng',
@@ -53,16 +57,21 @@ export function PersonEditModal({
 
   if (!person) return null
 
-  const isNew = person.isNew
+  const isNew = 'isNew' in person
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (isNew) {
-      onCreate(formData)
-    } else {
-      onSave(person.id, formData)
+    try {
+      if ('isNew' in person) {
+        const payload = validateFormData<PersonInsert>(formData, { name: true })
+        onCreate(payload)
+      } else {
+        onSave(person.id, formData)
+      }
+      onClose()
+    } catch (err: any) {
+      alert(err.message)
     }
-    onClose()
   }
 
   return (
@@ -84,7 +93,7 @@ export function PersonEditModal({
 
           <div className='grid grid-cols-4 items-center gap-4'>
             <Label className='text-right'>תפקיד</Label>
-            <Select value={formData.role} onValueChange={val => setFormData({ ...formData, role: val })}>
+            <Select value={formData.role ?? ''} onValueChange={val => setFormData({ ...formData, role: val })}>
               <SelectTrigger className='col-span-3'>
                 <SelectValue />
               </SelectTrigger>
@@ -99,7 +108,10 @@ export function PersonEditModal({
 
           <div className='grid grid-cols-4 items-center gap-4'>
             <Label className='text-right'>הרשאה</Label>
-            <Select value={formData.permission} onValueChange={val => setFormData({ ...formData, permission: val })}>
+            <Select
+              value={formData.permission ?? ''}
+              onValueChange={val => setFormData({ ...formData, permission: val })}
+            >
               <SelectTrigger className='col-span-3'>
                 <SelectValue />
               </SelectTrigger>
