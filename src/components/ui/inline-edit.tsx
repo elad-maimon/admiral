@@ -7,9 +7,10 @@ interface InlineEditProps {
   value: string
   onSave: (value: string) => void
   className?: string
+  multiline?: boolean
 }
 
-export function InlineEdit({ value, onSave, className }: InlineEditProps) {
+export function InlineEdit({ value, onSave, className, multiline }: InlineEditProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [currentValue, setCurrentValue] = useState(value)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -41,6 +42,31 @@ export function InlineEdit({ value, onSave, className }: InlineEditProps) {
   }
 
   if (isEditing) {
+    if (multiline) {
+      return (
+        <textarea
+          // @ts-ignore - ref types for textarea vs input can conflict slightly if we don't union
+          ref={inputRef as any}
+          value={currentValue}
+          onChange={e => setCurrentValue(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={e => {
+            // In multiline, enter saves, shift+enter adds line if needed, or we just keep same escape behavior
+            if (e.key === 'Escape') {
+              setIsEditing(false)
+              setCurrentValue(value)
+            }
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              handleSave()
+            }
+          }}
+          rows={2}
+          className={`py-1 px-2 text-sm resize-none bg-white rounded border border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500 ${className || ''}`}
+        />
+      )
+    }
+
     return (
       <Input
         ref={inputRef}

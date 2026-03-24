@@ -26,7 +26,8 @@ export function EpicsDashboard() {
     new_epic_title: '',
     owner_id: 'none',
     estimation: '',
-    status: 'backlog'
+    status: 'backlog',
+    importance: 3
   })
   const [addingSubTaskTo, setAddingSubTaskTo] = useState<string | null>(null)
 
@@ -134,33 +135,43 @@ export function EpicsDashboard() {
   }
 
   const handleSaveInlineRow = (epicId?: string) => {
-    if (!newRowData.title.trim()) {
-      setIsCreatingInline(false)
-      setAddingSubTaskTo(null)
-      return
-    }
-
     const payloadTargetEpic = epicId || newRowData.epic_id
 
     if (payloadTargetEpic === 'new') {
+      if (!newRowData.title.trim() && !newRowData.new_epic_title.trim()) {
+        setIsCreatingInline(false)
+        setAddingSubTaskTo(null)
+        return
+      }
       if (!(newRowData as any).initiative_id) {
         alert('יש לבחור יוזמה לפני יצירת משימה ראשית')
         return
       }
+
+      const hasDeliverable = newRowData.title.trim().length > 0
+
       mutCreateEpicTask.mutate({
         type: 'new_epic',
         epic: {
           title: newRowData.new_epic_title || newRowData.title,
-          initiative_id: parseInt((newRowData as any).initiative_id)
+          initiative_id: parseInt((newRowData as any).initiative_id),
+          importance: (newRowData as any).importance
         },
-        deliverable: {
-          title: newRowData.title,
-          owner_id: newRowData.owner_id !== 'none' ? newRowData.owner_id : undefined,
-          status: newRowData.status,
-          estimation_days: newRowData.estimation ? parseFloat(newRowData.estimation) : undefined
-        }
+        deliverable: hasDeliverable
+          ? {
+              title: newRowData.title,
+              owner_id: newRowData.owner_id !== 'none' ? newRowData.owner_id : undefined,
+              status: newRowData.status,
+              estimation_days: newRowData.estimation ? parseFloat(newRowData.estimation) : undefined
+            }
+          : undefined
       })
     } else {
+      if (!newRowData.title.trim()) {
+        setIsCreatingInline(false)
+        setAddingSubTaskTo(null)
+        return
+      }
       mutCreateEpicTask.mutate({
         type: 'existing_epic',
         deliverable: {
@@ -279,414 +290,87 @@ export function EpicsDashboard() {
     }
   }
 
-  // Fixed 8-column grid — always render all 8 cells in every row, use hidden class to hide cells that don't apply
-  // Cols: [initiative] [epic/tag] [deliverable title] [owner] [status] [estimation] [schedule] [actions]
-  const rowStyle = {
-    display: 'grid',
-    gridTemplateColumns:
-      'minmax(130px,1fr) minmax(120px,1fr) minmax(200px,2fr) minmax(110px,1fr) 110px 70px minmax(130px,1fr) 40px',
-    gap: '0.5rem'
-  }
-
-  const renderSingleDeliverableRow = (epic: any, deliverable: any) => (
-    <div
-      key={`epic-${epic.id}`}
-      className='p-1.5 px-4 items-center hover:bg-slate-50 transition-colors text-sm bg-white border-b last:border-0 border-slate-100 group'
-      style={rowStyle}
-    >
-      {/* col 1: Initiative */}
-      <div
-        className={`truncate text-xs text-slate-500 font-medium ${groupBy === 'initiative' ? 'hidden' : ''}`}
-        title={epic.initiative?.title}
-      >
-        {epic.initiative?.title || '—'}
-      </div>
-
-      {/* col 2: Epic/Tag */}
-      <div className='truncate flex items-center gap-1'>
-        <Tag className='w-3 h-3 text-slate-300 min-w-3' />
-        <InlineEdit
-          value={epic.title}
-          onSave={v => handleUpdateEpic(epic.id, 'title', v)}
-          className='font-medium text-slate-500 truncate'
-        />
-      </div>
-
-      {/* col 3: Deliverable Title */}
-      <div className='font-bold text-slate-800 truncate' title={deliverable?.title || epic.title}>
-        <InlineEdit
-          value={deliverable?.title || epic.title}
-          onSave={v =>
-            deliverable ? handleUpdateDeliverable(deliverable.id, 'title', v) : handleUpdateEpic(epic.id, 'title', v)
-          }
-          className='font-bold text-slate-800 w-full'
-        />
-      </div>
-
-      {/* col 4: Owner */}
-      <div>
+  const renderNewEpicCell = () => (
+    <>
+      <td className='py-0.5 px-2 align-middle w-[140px] bg-blue-50 border-b border-r border-slate-200/60'>
         <Select
-          value={deliverable?.owner_id || epic.owner_id || 'none'}
-          onValueChange={v =>
-            deliverable
-              ? handleUpdateDeliverable(deliverable.id, 'owner_id', v === 'none' ? null : v)
-              : handleUpdateEpic(epic.id, 'owner_id', v === 'none' ? null : v)
-          }
+          value={(newRowData as any).initiative_id || ''}
+          onValueChange={v => setNewRowData({ ...newRowData, initiative_id: v } as any)}
         >
-          <SelectTrigger className='h-7 w-full border-transparent hover:border-slate-200 bg-transparent shadow-none px-2 text-xs'>
-            <SelectValue placeholder='ללא פעיל' />
+          <SelectTrigger className='h-7 w-full border-slate-200 bg-white shadow-none px-2 text-xs !p-1'>
+            <SelectValue placeholder='* בחר יוזמה' />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value='none' className='text-slate-400 italic'>
-              ללא פעיל
-            </SelectItem>
-            {people?.map((p: any) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
+            {initiatives?.map((i: any) => (
+              <SelectItem key={i.id} value={i.id.toString()}>
+                {i.title}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-      </div>
-
-      {/* col 5: Status */}
-      <div>
-        {deliverable ? (
-          <Select value={deliverable.status} onValueChange={v => handleUpdateDeliverable(deliverable.id, 'status', v)}>
-            <SelectTrigger
-              className={`h-7 w-full border-transparent shadow-none px-2 text-[11px] ${getStatusBadgeColor(deliverable.status)}`}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {statusOptions.map(opt => (
-                <SelectItem key={opt} value={opt}>
-                  {opt}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <Badge
-            variant='outline'
-            className='font-normal pb-0.5 text-[11px] bg-slate-50 text-slate-400 border-slate-100'
-          >
-            אין תוצר
-          </Badge>
-        )}
-      </div>
-
-      {/* col 6: Estimation */}
-      <div className='text-slate-600 font-mono text-center text-xs flex items-center justify-center'>
-        {deliverable ? (
-          <div className='flex items-center'>
-            <InlineEdit
-              value={deliverable.estimation_days ? deliverable.estimation_days.toString() : ''}
-              onSave={v => handleUpdateDeliverable(deliverable.id, 'estimation_days', v ? parseFloat(v) : null)}
-              className='w-8 text-center'
-            />
-            <span className='text-slate-400 ml-0.5'>d</span>
-          </div>
-        ) : (
-          '—'
-        )}
-      </div>
-
-      {/* col 7: Schedule */}
-      <div className={`text-slate-500 text-[11px] flex items-center ${groupBy === 'month' ? 'hidden' : ''}`}>
-        {deliverable?.planned_week_start
-          ? new Date(deliverable.planned_week_start).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })
-          : '?'}
-        {' - '}
-        {deliverable?.planned_week_end
-          ? new Date(deliverable.planned_week_end).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })
-          : '?'}
-      </div>
-
-      {/* col 8: Actions */}
-      <div className='flex justify-end opacity-0 group-hover:opacity-100 transition-opacity'>
-        <Button
-          variant='ghost'
-          size='icon'
-          className='h-6 w-6 text-primary hover:bg-primary/10'
-          onClick={() => setAddingSubTaskTo(epic.id)}
-          title='פצל משימה'
-        >
-          <ChevronDown className='w-3 h-3' />
-        </Button>
-      </div>
-
-      {/* Inline Sub-task Creator (spans all cols) */}
-      {addingSubTaskTo === epic.id && <div className='col-span-full mt-1 pl-4'>{renderInlineRow(epic.id)}</div>}
-    </div>
-  )
-
-  const renderMultiDeliverableRow = (epic: any) => {
-    const isExpanded = expandedEpics.has(epic.id) || addingSubTaskTo === epic.id
-    const deliverables = epic.deliverables || []
-
-    // Sum estimations
-    const totalEst = deliverables.reduce((acc: number, d: any) => acc + (d.estimation_days || 0), 0)
-
-    return (
-      <div key={`epic-${epic.id}`} className='flex flex-col border-b last:border-0 border-slate-200'>
-        {/* Parent Epic Row */}
-        <div
-          className='p-1.5 px-4 items-center hover:bg-slate-50 transition-colors cursor-pointer text-sm bg-slate-50/50 group'
-          onClick={e => toggleEpic(epic.id, e)}
-          style={rowStyle}
-        >
-          {/* col 1: Initiative */}
-          <div
-            className={`text-slate-500 font-medium truncate text-xs flex items-center gap-1 ${groupBy === 'initiative' ? 'hidden' : ''}`}
-          >
-            {isExpanded ? (
-              <ChevronUp className='w-3 h-3 text-slate-400 min-w-3' />
-            ) : (
-              <ChevronDown className='w-3 h-3 text-slate-400 min-w-3' />
-            )}
-            <span className='truncate' title={epic.initiative?.title}>
-              {epic.initiative?.title || '—'}
-            </span>
-          </div>
-
-          {/* col 2: Epic/Tag */}
-          <div className='truncate flex items-center gap-1'>
-            {groupBy === 'initiative' &&
-              (isExpanded ? (
-                <ChevronUp className='w-3 h-3 text-slate-400 min-w-3' />
-              ) : (
-                <ChevronDown className='w-3 h-3 text-slate-400 min-w-3' />
-              ))}
-            <Tag className='w-3 h-3 text-slate-400 min-w-3' />
-            <span className='font-normal text-slate-500 truncate text-xs'>{epic.title}</span>
-          </div>
-
-          {/* col 3: Title / count badge */}
-          <div className='font-bold text-slate-800 truncate flex items-center gap-2' title={epic.title}>
-            <span className='font-bold text-slate-800 truncate'>{epic.title}</span>
-            <span className='text-[10px] font-normal text-slate-400 bg-white px-1.5 rounded-full border border-slate-200 whitespace-nowrap'>
-              {deliverables.length} תתי־משימות
-            </span>
-          </div>
-
-          {/* col 4: Owner */}
-          <div className='text-slate-600 truncate text-xs'>
-            {epic.owner_id ? people?.find((p: any) => p.id === epic.owner_id)?.name : '—'}
-          </div>
-
-          {/* col 5: Status */}
-          <div>
-            <Badge variant='secondary' className='font-normal text-[11px] pb-0.5 bg-slate-200/50 text-slate-700'>
-              {epic.execution_status === 'done'
-                ? 'הושלם'
-                : epic.execution_status === 'in_dev'
-                  ? 'בביצוע'
-                  : epic.execution_status === 'blocked'
-                    ? 'חסום'
-                    : 'בתכנון'}
-            </Badge>
-          </div>
-
-          {/* col 6: Estimation */}
-          <div className='text-slate-600 font-mono text-center text-xs font-bold'>
-            {totalEst > 0 ? `${totalEst}d` : '—'}
-          </div>
-
-          {/* col 7: Schedule */}
-          <div className={`text-slate-400 text-[11px] italic ${groupBy === 'month' ? 'hidden' : ''}`}>—</div>
-
-          {/* col 8: Actions */}
-          <div className='flex justify-end opacity-0 group-hover:opacity-100 transition-opacity'>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='h-6 w-6 text-primary hover:bg-primary/10'
-              onClick={e => {
-                e.stopPropagation()
-                setAddingSubTaskTo(epic.id)
-                setExpandedEpics(prev => new Set(prev).add(epic.id))
-              }}
-              title='הוסף תת-משימה'
-            >
-              <Plus className='w-3 h-3' />
-            </Button>
-          </div>
-        </div>
-
-        {/* Child Deliverable Rows */}
-        {isExpanded && (
-          <div className='bg-white border-t border-slate-100 divide-y divide-slate-50 relative'>
-            <div className='absolute right-6 top-0 bottom-0 w-px bg-slate-100 z-0'></div>
-            {deliverables.map((deliverable: any) => (
-              <div
-                key={`deliv-${deliverable.id}`}
-                className='p-1.5 px-4 items-center hover:bg-slate-50 transition-colors text-sm relative z-10'
-                style={rowStyle}
-              >
-                {/* col 1: Initiative (spacer) */}
-                <div className={groupBy === 'initiative' ? 'hidden' : ''}></div>
-
-                {/* col 2: Epic/Tag (indent label) */}
-                <div className='text-slate-300 pointer-events-none text-xs'>↳ תת־משימה</div>
-
-                {/* col 3: Title */}
-                <div className='font-medium text-slate-700 truncate' title={deliverable.title}>
-                  <InlineEdit
-                    value={deliverable.title}
-                    onSave={v => handleUpdateDeliverable(deliverable.id, 'title', v)}
-                    className='w-full'
-                  />
-                </div>
-
-                {/* col 4: Owner */}
-                <div>
-                  <Select
-                    value={deliverable.owner_id || 'none'}
-                    onValueChange={v => handleUpdateDeliverable(deliverable.id, 'owner_id', v === 'none' ? null : v)}
-                  >
-                    <SelectTrigger className='h-7 w-full border-transparent hover:border-slate-200 bg-transparent shadow-none px-2 text-xs'>
-                      <SelectValue placeholder='ללא שיוך' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='none' className='text-slate-400 italic'>
-                        ללא שיוך
-                      </SelectItem>
-                      {people?.map((p: any) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* col 5: Status */}
-                <div>
-                  <Select
-                    value={deliverable.status}
-                    onValueChange={v => handleUpdateDeliverable(deliverable.id, 'status', v)}
-                  >
-                    <SelectTrigger
-                      className={`h-7 w-full border-transparent shadow-none px-2 text-[11px] ${getStatusBadgeColor(deliverable.status)}`}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statusOptions.map(opt => (
-                        <SelectItem key={opt} value={opt}>
-                          {opt}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* col 6: Estimation */}
-                <div className='text-slate-600 font-mono text-center text-xs flex items-center justify-center'>
-                  <InlineEdit
-                    value={deliverable.estimation_days ? deliverable.estimation_days.toString() : ''}
-                    onSave={v => handleUpdateDeliverable(deliverable.id, 'estimation_days', v ? parseFloat(v) : null)}
-                    className='w-8 text-center'
-                  />
-                  <span className='text-slate-400 ml-0.5'>d</span>
-                </div>
-
-                {/* col 7: Schedule */}
-                <div className={`text-slate-500 text-[11px] ${groupBy === 'month' ? 'hidden' : ''}`}>
-                  {deliverable.planned_week_start
-                    ? new Date(deliverable.planned_week_start).toLocaleDateString('he-IL', {
-                        day: '2-digit',
-                        month: '2-digit'
-                      })
-                    : '?'}
-                  {' - '}
-                  {deliverable.planned_week_end
-                    ? new Date(deliverable.planned_week_end).toLocaleDateString('he-IL', {
-                        day: '2-digit',
-                        month: '2-digit'
-                      })
-                    : '?'}
-                </div>
-
-                {/* col 8: Actions (empty for sub-rows) */}
-                <div></div>
-              </div>
-            ))}
-
-            {/* Inline Sub-task Creator */}
-            {addingSubTaskTo === epic.id && (
-              <div className='pr-12 border-t border-slate-50'>{renderInlineRow(epic.id)}</div>
-            )}
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  const renderInlineRow = (forceEpicId?: string) => (
-    <div
-      className={`p-1.5 px-4 items-center transition-colors text-sm bg-blue-50/50 border-b border-blue-100 ${forceEpicId ? 'border-none bg-slate-50' : ''}`}
-      style={rowStyle}
-    >
-      {/* col 1: Initiative picker */}
-      <div className={groupBy === 'initiative' ? 'hidden' : ''}>
-        {!forceEpicId ? (
-          <Select
-            value={(newRowData as any).initiative_id || ''}
-            onValueChange={v => setNewRowData({ ...newRowData, initiative_id: v } as any)}
-          >
-            <SelectTrigger className='h-7 w-full border-slate-200 bg-white shadow-none px-2 text-xs'>
-              <SelectValue placeholder='* בחר יוזמה' />
-            </SelectTrigger>
-            <SelectContent>
-              {initiatives?.map((i: any) => (
-                <SelectItem key={i.id} value={i.id.toString()}>
-                  {i.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : null}
-      </div>
-
-      {/* col 2: Epic tag input */}
-      <div>
-        {!forceEpicId ? (
+      </td>
+      <td className='py-0.5 px-2 align-middle w-[220px] bg-blue-50 border-b border-l border-slate-200/60'>
+        <div className='flex flex-col gap-1'>
           <Input
             value={newRowData.new_epic_title}
             onChange={e => setNewRowData({ ...newRowData, new_epic_title: e.target.value })}
-            placeholder='תגית (אופציונלי)'
-            className='h-7 text-xs bg-white shadow-none focus-visible:ring-1 focus-visible:ring-primary'
-            autoFocus
+            placeholder='אפיק (אופציונלי)'
+            className='h-7 text-xs bg-white shadow-none focus-visible:ring-1 focus-visible:ring-primary w-full'
           />
-        ) : (
-          <div className='text-slate-400 text-xs'>✧ תת־משימה</div>
-        )}
-      </div>
+          {newRowData.new_epic_title && (
+            <div className='flex items-center gap-1.5'>
+              <span className='text-[10px] text-slate-500'>עדיפות:</span>
+              <Select
+                value={String((newRowData as any).importance)}
+                onValueChange={v => setNewRowData({ ...newRowData, importance: parseInt(v) } as any)}
+              >
+                <SelectTrigger className='h-5 text-[10px] border-slate-200 bg-white shadow-none px-1.5 py-0 w-[78px] min-h-0'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='1' className='text-[10px]'>
+                    מחויב
+                  </SelectItem>
+                  <SelectItem value='2' className='text-[10px]'>
+                    אסטרטגי
+                  </SelectItem>
+                  <SelectItem value='3' className='text-[10px]'>
+                    רגיל
+                  </SelectItem>
+                  <SelectItem value='4' className='text-[10px]'>
+                    NTH
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+      </td>
+      <td className='p-2 align-middle w-[120px] bg-blue-50 border-b border-l border-slate-200/60'></td>
+    </>
+  )
 
-      {/* col 3: Title */}
-      <div>
+  const renderNewDeliverableCells = (forceEpicId: boolean) => (
+    <>
+      <td className='p-1.5 align-middle'>
         <Input
           value={newRowData.title}
           onChange={e => setNewRowData({ ...newRowData, title: e.target.value })}
-          placeholder='שם המשימה/תוצר'
+          placeholder='שם ה-deliverable'
           className='h-7 text-xs font-bold bg-white shadow-none focus-visible:ring-1 focus-visible:ring-primary w-full'
           onKeyDown={e => {
-            if (e.key === 'Enter') handleSaveInlineRow(forceEpicId)
+            if (e.key === 'Enter') handleSaveInlineRow(forceEpicId ? addingSubTaskTo! : undefined)
             if (e.key === 'Escape') {
               setIsCreatingInline(false)
               setAddingSubTaskTo(null)
             }
           }}
-          autoFocus={!!forceEpicId}
+          autoFocus={forceEpicId}
         />
-      </div>
-
-      {/* col 4: Owner */}
-      <div>
+      </td>
+      <td className='p-2 align-middle w-[120px]'>
         <Select value={newRowData.owner_id} onValueChange={v => setNewRowData({ ...newRowData, owner_id: v })}>
-          <SelectTrigger className='h-7 w-full border-slate-200 bg-white shadow-none px-2 text-xs'>
+          <SelectTrigger className='h-7 w-full border-slate-200 bg-white shadow-none px-2 text-xs !p-1'>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -700,10 +384,9 @@ export function EpicsDashboard() {
             ))}
           </SelectContent>
         </Select>
-      </div>
-
-      {/* col 5: Status */}
-      <div>
+      </td>
+      <td className='p-2 align-middle w-[120px]'></td>
+      <td className='p-1.5 align-middle w-[110px]'>
         <Select value={newRowData.status} onValueChange={v => setNewRowData({ ...newRowData, status: v })}>
           <SelectTrigger className='h-7 w-full shadow-none px-2 text-[11px] bg-white border-slate-200'>
             <SelectValue />
@@ -716,34 +399,28 @@ export function EpicsDashboard() {
             ))}
           </SelectContent>
         </Select>
-      </div>
-
-      {/* col 6: Estimation */}
-      <div>
+      </td>
+      <td className='p-2 align-middle w-[80px]'>
         <Input
           value={newRowData.estimation}
           onChange={e => setNewRowData({ ...newRowData, estimation: e.target.value })}
           placeholder='d'
           className='h-7 text-xs text-center font-mono bg-white shadow-none focus-visible:ring-1 focus-visible:ring-primary'
-          onKeyDown={e => e.key === 'Enter' && handleSaveInlineRow(forceEpicId)}
+          onKeyDown={e => e.key === 'Enter' && handleSaveInlineRow(forceEpicId ? addingSubTaskTo! : undefined)}
         />
-      </div>
-
-      {/* col 7: Schedule (placeholder) */}
-      <div className={`text-slate-400 text-[11px] flex items-center ${groupBy === 'month' ? 'hidden' : ''}`}>—</div>
-
-      {/* col 8: Save action */}
-      <div className='flex gap-1 justify-end'>
+      </td>
+      <td className='p-2 align-middle w-[140px] text-slate-400 text-[11px] text-center'>—</td>
+      <td className='p-2 align-middle w-[40px] text-left'>
         <Button
           variant='ghost'
           size='icon'
           className='h-6 w-6 text-emerald-600 hover:bg-emerald-50'
-          onClick={() => handleSaveInlineRow(forceEpicId)}
+          onClick={() => handleSaveInlineRow(forceEpicId ? addingSubTaskTo! : undefined)}
         >
           <Plus className='w-3 h-3' />
         </Button>
-      </div>
-    </div>
+      </td>
+    </>
   )
 
   return (
@@ -753,7 +430,7 @@ export function EpicsDashboard() {
           <h1 className='text-3xl font-bold tracking-tight'>משימות ותוצרים</h1>
           <Button onClick={() => setIsCreatingInline(true)} disabled={isCreatingInline}>
             <Plus className='w-4 h-4 ml-2' />
-            משימה חדשה
+            הוספת אפיק
           </Button>
         </div>
 
@@ -796,83 +473,364 @@ export function EpicsDashboard() {
       </div>
 
       <div className='border bg-white shadow-sm rounded-md overflow-hidden'>
-        {/* Table Header — always 8 cols, mirror rowStyle exactly */}
-        <div
-          className='p-1.5 bg-slate-100 border-b font-semibold text-slate-600 text-sm px-4 z-10 relative select-none'
-          style={rowStyle}
-        >
-          {/* col 1 */}
-          <div
-            className={`cursor-pointer hover:text-slate-900 flex items-center ${groupBy === 'initiative' ? 'hidden' : ''}`}
-            onClick={() => handleSort('initiative')}
-          >
-            יוזמה <SortIcon columnKey='initiative' />
-          </div>
-          {/* col 2 */}
-          <div className='cursor-pointer hover:text-slate-900 flex items-center' onClick={() => handleSort('epic')}>
-            תגית <SortIcon columnKey='epic' />
-          </div>
-          {/* col 3 */}
-          <div className='cursor-pointer hover:text-slate-900 flex items-center' onClick={() => handleSort('title')}>
-            שם המשימה/תוצר <SortIcon columnKey='title' />
-          </div>
-          {/* col 4 */}
-          <div className='cursor-pointer hover:text-slate-900 flex items-center' onClick={() => handleSort('owner')}>
-            אחראי <SortIcon columnKey='owner' />
-          </div>
-          {/* col 5 */}
-          <div className='cursor-pointer hover:text-slate-900 flex items-center' onClick={() => handleSort('status')}>
-            סטטוס <SortIcon columnKey='status' />
-          </div>
-          {/* col 6 */}
-          <div
-            className='cursor-pointer hover:text-slate-900 flex items-center justify-center'
-            onClick={() => handleSort('estimation')}
-          >
-            הערכה <SortIcon columnKey='estimation' />
-          </div>
-          {/* col 7 */}
-          <div
-            className={`cursor-pointer hover:text-slate-900 flex items-center ${groupBy === 'month' ? 'hidden' : ''}`}
-            onClick={() => handleSort('target')}
-          >
-            לו&quot;ז <SortIcon columnKey='target' />
-          </div>
-          {/* col 8 */}
-          <div></div>
-        </div>
-
-        <div className='flex flex-col pb-4'>
-          {groups.length === 0 || (groups.length === 1 && groups[0].rows.length === 0) ? (
-            <div className='p-8 text-center text-slate-500 italic bg-white'>לא נמצאו משימות מתאימות לפילטר</div>
-          ) : (
-            groups.map((group, idx) => (
-              <div key={idx} className='flex flex-col bg-white'>
-                {groupBy !== 'none' && (
-                  <div className='p-2 px-4 bg-slate-50/80 border-b border-t font-semibold text-slate-700 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] first:border-t-0 sticky top-0 backdrop-blur-sm z-10 flex items-center justify-between'>
-                    <span>{group.header}</span>
-                    <Badge variant='outline' className='bg-white'>
-                      {group.rows.length} שורות
-                    </Badge>
-                  </div>
-                )}
-
-                <div className='flex flex-col'>
+        <div className='overflow-x-auto'>
+          <table className='w-full text-right text-sm'>
+            <thead className='bg-slate-50 py-2 border-b select-none font-semibold text-xs text-slate-500'>
+              <tr>
+                <th
+                  className='p-2.5 px-4 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th w-[140px]'
+                  onClick={() => handleSort('initiative')}
+                >
+                  יוזמה <SortIcon columnKey='initiative' />
+                </th>
+                <th
+                  className='p-2.5 px-4 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th w-[220px]'
+                  onClick={() => handleSort('epic')}
+                >
+                  אפיק <SortIcon columnKey='epic' />
+                </th>
+                <th
+                  className='p-2.5 px-4 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th w-[100px]'
+                  onClick={() => handleSort('owner')}
+                >
+                  אחראי/ת <SortIcon columnKey='owner' />
+                </th>
+                <th
+                  className='p-2.5 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th'
+                  onClick={() => handleSort('title')}
+                >
+                  שם ה-deliverable <SortIcon columnKey='title' />
+                </th>
+                <th
+                  className='p-2.5 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th w-[100px]'
+                  onClick={() => handleSort('owner')}
+                >
+                  Feature Lead <SortIcon columnKey='owner' />
+                </th>
+                <th
+                  className='p-2.5 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th w-[240px]'
+                  onClick={() => handleSort('dod')}
+                >
+                  DoD <SortIcon columnKey='dod' />
+                </th>
+                <th
+                  className='p-2.5 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th w-[110px]'
+                  onClick={() => handleSort('status')}
+                >
+                  סטטוס <SortIcon columnKey='status' />
+                </th>
+                <th
+                  className='p-2.5 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th w-[70px] text-center'
+                  onClick={() => handleSort('estimation')}
+                >
+                  הערכה <SortIcon columnKey='estimation' />
+                </th>
+                <th
+                  className='p-2.5 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th w-[90px]'
+                  onClick={() => handleSort('target')}
+                >
+                  לו&quot;ז <SortIcon columnKey='target' />
+                </th>
+                <th className='p-2.5 w-[40px]'></th>
+              </tr>
+            </thead>
+            {groups.length === 0 || (groups.length === 1 && groups[0].rows.length === 0) ? (
+              <tbody>
+                <tr>
+                  <td colSpan={10} className='p-8 text-center text-slate-500 italic'>
+                    לא נמצאו משימות מתאימות לפילטר
+                  </td>
+                </tr>
+              </tbody>
+            ) : (
+              groups.map((group, gIdx) => (
+                <tbody key={`group-${gIdx}`} className='divide-y divide-slate-100'>
+                  {groupBy !== 'none' && (
+                    <tr className='bg-slate-50/80 border-b font-semibold text-slate-700 text-sm'>
+                      <td colSpan={10} className='p-2 px-4'>
+                        <div className='flex items-center justify-between'>
+                          <span>{group.header}</span>
+                          <Badge variant='outline' className='bg-white'>
+                            {group.rows.length} אפיקים
+                          </Badge>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   {group.rows.map((epic: any) => {
                     const deliverables = epic.deliverables || []
-                    if (deliverables.length <= 1) {
-                      return renderSingleDeliverableRow(epic, deliverables[0])
-                    } else {
-                      return renderMultiDeliverableRow(epic)
-                    }
-                  })}
-                </div>
-              </div>
-            ))
-          )}
+                    const rowCount = Math.max(1, deliverables.length) + (addingSubTaskTo === epic.id ? 1 : 0)
+                    const totalEst = deliverables.reduce((acc: number, d: any) => acc + (d.estimation_days || 0), 0)
 
-          {/* Main List Inline Creator */}
-          {isCreatingInline && renderInlineRow()}
+                    const epicCell = (
+                      <>
+                        <td
+                          rowSpan={rowCount}
+                          className='py-0.5 px-2 border-b border-slate-200/60 bg-slate-50/30 align-top w-[140px]'
+                        >
+                          {epic.initiative ? (
+                            <div className='text-xs font-medium text-slate-600 truncate' title={epic.initiative.title}>
+                              {epic.initiative.title}
+                            </div>
+                          ) : (
+                            <span className='text-slate-400 italic text-xs'>—</span>
+                          )}
+                        </td>
+                        <td
+                          rowSpan={rowCount}
+                          className='py-0.5 px-2 border-b border-l border-slate-200/60 bg-slate-50/30 align-top w-[220px] relative group/epic'
+                        >
+                          <div className='flex flex-col flex-1 min-w-0'>
+                            <div className='flex items-start justify-between gap-1 mb-1'>
+                              <div
+                                className='font-bold text-slate-800 text-sm leading-tight whitespace-nowrap overflow-hidden text-ellipsis cursor-text flex-1'
+                                title={epic.title}
+                              >
+                                <InlineEdit
+                                  value={epic.title}
+                                  onSave={v => handleUpdateEpic(epic.id, 'title', v)}
+                                  className='w-full !p-0 !m-0 !bg-transparent !border-transparent hover:!text-slate-900'
+                                />
+                              </div>
+                              <Button
+                                variant='ghost'
+                                size='icon'
+                                className='h-5 w-5 min-w-5 rounded hover:bg-slate-200 text-slate-400 opacity-0 group-hover/epic:opacity-100 transition-opacity shrink-0'
+                                onClick={() => setAddingSubTaskTo(epic.id)}
+                                title='הוסף deliverable'
+                              >
+                                <Plus className='w-3 h-3' />
+                              </Button>
+                            </div>
+
+                            <div className='flex flex-row items-center gap-1.5 flex-wrap'>
+                              <Select
+                                value={epic.planning_status || 'scoping'}
+                                onValueChange={v => handleUpdateEpic(epic.id, 'planning_status', v)}
+                              >
+                                <SelectTrigger className='h-4 text-[10px] border-slate-200 bg-white shadow-none px-1 py-0 w-[70px] min-h-0'>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {['scoping', 'active', 'cancelled'].map(opt => (
+                                    <SelectItem key={opt} value={opt} className='text-[10px]'>
+                                      {opt}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Badge
+                                variant='outline'
+                                className={`font-medium text-[10px] px-1.5 py-0 h-4 leading-4 cursor-pointer hover:opacity-80 transition-colors ${
+                                  epic.importance === 1
+                                    ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                                    : epic.importance === 2
+                                      ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                                      : epic.importance === 3
+                                        ? 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                        : epic.importance === 4
+                                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                          : 'bg-white text-slate-500 hover:bg-slate-50'
+                                }`}
+                                onClick={() => {
+                                  let next = (epic.importance || 0) + 1
+                                  if (next > 4) next = 1
+                                  handleUpdateEpic(epic.id, 'importance', next)
+                                }}
+                              >
+                                {epic.importance === 1
+                                  ? 'מחויב'
+                                  : epic.importance === 2
+                                    ? 'אסטרטגי'
+                                    : epic.importance === 3
+                                      ? 'רגיל'
+                                      : epic.importance === 4
+                                        ? 'NTH'
+                                        : 'Imp+'}
+                              </Badge>
+                              {totalEst > 0 && (
+                                <span className='font-mono font-medium text-slate-500 bg-slate-100 px-1 rounded h-4 leading-4 flex items-center justify-center text-[10px] min-w-[20px]'>
+                                  {totalEst}d
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td
+                          rowSpan={rowCount}
+                          className='py-0.5 px-2 border-b border-l border-slate-200/60 bg-slate-50/30 align-top w-[100px]'
+                        >
+                          <Select
+                            value={epic.owner_id || 'none'}
+                            onValueChange={v => handleUpdateEpic(epic.id, 'owner_id', v === 'none' ? null : v)}
+                          >
+                            <SelectTrigger className='h-7 border-transparent hover:border-slate-200 bg-transparent shadow-none px-2 text-xs'>
+                              <SelectValue placeholder='ללא שיוך' />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value='none' className='text-[10px] italic'>
+                                ללא שיוך
+                              </SelectItem>
+                              {people?.map((p: any) => (
+                                <SelectItem key={p.id} value={p.id} className='text-[10px]'>
+                                  {p.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                      </>
+                    )
+
+                    if (deliverables.length === 0) {
+                      return (
+                        <tr
+                          key={`epic-${epic.id}`}
+                          className='hover:bg-slate-50 transition-colors bg-white group border-b border-slate-100 last:border-0'
+                        >
+                          {epicCell}
+                          {addingSubTaskTo === epic.id ? (
+                            renderNewDeliverableCells(true)
+                          ) : (
+                            <td colSpan={7} className='p-3 text-slate-400 italic text-xs'>
+                              אין תוצרים עדיין.
+                            </td>
+                          )}
+                        </tr>
+                      )
+                    }
+
+                    const rows = []
+                    for (let i = 0; i < deliverables.length; i++) {
+                      const deliverable = deliverables[i]
+                      rows.push(
+                        <tr
+                          key={`deliv-${deliverable.id}`}
+                          className='hover:bg-slate-50 transition-colors bg-white group border-b border-slate-100 last:border-0'
+                        >
+                          {i === 0 && epicCell}
+                          <td className='p-1.5 align-middle'>
+                            <div
+                              className='font-medium text-slate-700 cursor-text block w-full'
+                              title={deliverable.title}
+                            >
+                              <InlineEdit
+                                value={deliverable.title}
+                                onSave={v => handleUpdateDeliverable(deliverable.id, 'title', v)}
+                                className='w-full !p-0 !m-0 !bg-transparent !border-transparent line-clamp-2 whitespace-normal break-words leading-tight'
+                                multiline={true}
+                              />
+                            </div>
+                          </td>
+                          <td className='p-1.5 align-middle w-[120px]'>
+                            <Select
+                              value={deliverable.owner_id || 'none'}
+                              onValueChange={v =>
+                                handleUpdateDeliverable(deliverable.id, 'owner_id', v === 'none' ? null : v)
+                              }
+                            >
+                              <SelectTrigger className='h-7 border-transparent hover:border-slate-200 bg-transparent shadow-none px-2 text-xs'>
+                                <SelectValue placeholder='ללא שיוך' />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value='none' className='text-[10px] italic'>
+                                  ללא שיוך
+                                </SelectItem>
+                                {people?.map((p: any) => (
+                                  <SelectItem key={p.id} value={p.id} className='text-[10px]'>
+                                    {p.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className='p-2 align-middle w-[120px]'>
+                            <div
+                              className='text-xs text-slate-600 bg-transparent border border-transparent hover:border-slate-200 px-1.5 py-1 rounded truncate'
+                              title={deliverable.dod || ''}
+                            >
+                              <InlineEdit
+                                value={deliverable.dod || ''}
+                                onSave={v => handleUpdateDeliverable(deliverable.id, 'dod', v)}
+                                className='w-full'
+                              />
+                            </div>
+                          </td>
+                          <td className='p-1.5 align-middle w-[110px]'>
+                            <Select
+                              value={deliverable.status}
+                              onValueChange={v => handleUpdateDeliverable(deliverable.id, 'status', v)}
+                            >
+                              <SelectTrigger
+                                className={`h-7 border-transparent shadow-none px-2 text-[11px] ${getStatusBadgeColor(deliverable.status)}`}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {statusOptions.map(opt => (
+                                  <SelectItem key={opt} value={opt}>
+                                    {opt}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className='p-1.5 align-middle w-[70px]'>
+                            <div className='flex items-center justify-center text-slate-600 font-mono text-xs'>
+                              <InlineEdit
+                                value={deliverable.estimation_days ? deliverable.estimation_days.toString() : ''}
+                                onSave={v =>
+                                  handleUpdateDeliverable(deliverable.id, 'estimation_days', v ? parseFloat(v) : null)
+                                }
+                                className='w-8 text-center'
+                              />
+                              <span className='ml-0.5 text-slate-400'>d</span>
+                            </div>
+                          </td>
+                          <td className='p-1.5 align-middle w-[90px]'>
+                            <div className='text-slate-500 text-[11px] inline-flex items-center gap-1'>
+                              {deliverable.planned_week_start
+                                ? new Date(deliverable.planned_week_start).toLocaleDateString('he-IL', {
+                                    day: '2-digit',
+                                    month: '2-digit'
+                                  })
+                                : '?'}
+                              <span>-</span>
+                              {deliverable.planned_week_end
+                                ? new Date(deliverable.planned_week_end).toLocaleDateString('he-IL', {
+                                    day: '2-digit',
+                                    month: '2-digit'
+                                  })
+                                : '?'}
+                            </div>
+                          </td>
+                          <td className='p-2 align-middle text-left w-[40px]'></td>
+                        </tr>
+                      )
+                    }
+
+                    if (addingSubTaskTo === epic.id) {
+                      rows.push(
+                        <tr key={`add-${epic.id}`} className='bg-blue-50/50 border-b border-slate-100 last:border-0'>
+                          {renderNewDeliverableCells(true)}
+                        </tr>
+                      )
+                    }
+
+                    return rows
+                  })}
+                </tbody>
+              ))
+            )}
+            {isCreatingInline && (
+              <tbody>
+                <tr className='bg-blue-50/50 border-t-2 border-slate-200'>
+                  {renderNewEpicCell()}
+                  {renderNewDeliverableCells(false)}
+                </tr>
+              </tbody>
+            )}
+          </table>
         </div>
 
         {!isCreatingInline && (
@@ -883,7 +841,7 @@ export function EpicsDashboard() {
             <div className='border border-slate-200 rounded text-slate-400 bg-white shadow-sm p-0.5'>
               <Plus className='w-3 h-3' />
             </div>{' '}
-            הוסף משימה
+            הוספת אפיק
           </div>
         )}
       </div>
