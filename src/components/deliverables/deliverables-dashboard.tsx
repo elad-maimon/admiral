@@ -3,8 +3,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus, ChevronDown, ChevronUp, Tag } from 'lucide-react'
+import { Plus, ChevronDown, ChevronUp, Tag, Pencil } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { InlineEdit } from '@/components/ui/inline-edit'
 import { Input } from '@/components/ui/input'
@@ -18,6 +19,10 @@ export function EpicsDashboard() {
 
   const [expandedEpics, setExpandedEpics] = useState<Set<string>>(new Set())
 
+  const [dodModalOpen, setDodModalOpen] = useState(false)
+  const [dodModalDeliverable, setDodModalDeliverable] = useState<any>(null)
+  const [dodModalText, setDodModalText] = useState('')
+
   // New inline row state
   const [isCreatingInline, setIsCreatingInline] = useState(false)
   const [newRowData, setNewRowData] = useState({
@@ -27,7 +32,8 @@ export function EpicsDashboard() {
     owner_id: 'none',
     estimation: '',
     status: 'backlog',
-    importance: 3
+    importance: 3,
+    lighthouse_month: ''
   })
   const [addingSubTaskTo, setAddingSubTaskTo] = useState<string | null>(null)
 
@@ -84,7 +90,8 @@ export function EpicsDashboard() {
         owner_id: 'none',
         estimation: '',
         status: 'backlog',
-        initiative_id: ''
+        initiative_id: '',
+        lighthouse_month: ''
       } as any)
       if (opts.type === 'existing_epic') {
         setExpandedEpics(prev => new Set(prev).add(opts.deliverable.epic_id))
@@ -155,14 +162,15 @@ export function EpicsDashboard() {
         epic: {
           title: newRowData.new_epic_title || newRowData.title,
           initiative_id: parseInt((newRowData as any).initiative_id),
-          importance: (newRowData as any).importance
+          importance: (newRowData as any).importance,
+          owner_id: newRowData.owner_id !== 'none' ? newRowData.owner_id : undefined
         },
         deliverable: hasDeliverable
           ? {
               title: newRowData.title,
-              owner_id: newRowData.owner_id !== 'none' ? newRowData.owner_id : undefined,
               status: newRowData.status,
-              estimation_days: newRowData.estimation ? parseFloat(newRowData.estimation) : undefined
+              estimation_days: newRowData.estimation ? parseFloat(newRowData.estimation) : undefined,
+              lighthouse_month: (newRowData as any).lighthouse_month ? `${(newRowData as any).lighthouse_month}-01` : undefined
             }
           : undefined
       })
@@ -177,9 +185,9 @@ export function EpicsDashboard() {
         deliverable: {
           epic_id: payloadTargetEpic,
           title: newRowData.title,
-          owner_id: newRowData.owner_id !== 'none' ? newRowData.owner_id : undefined,
           status: newRowData.status,
-          estimation_days: newRowData.estimation ? parseFloat(newRowData.estimation) : undefined
+          estimation_days: newRowData.estimation ? parseFloat(newRowData.estimation) : undefined,
+          lighthouse_month: (newRowData as any).lighthouse_month ? `${(newRowData as any).lighthouse_month}-01` : undefined
         }
       })
     }
@@ -242,8 +250,8 @@ export function EpicsDashboard() {
         valA = a.deliverables?.reduce((acc: number, d: any) => acc + (d.estimation_days || 0), 0) || 0
         valB = b.deliverables?.reduce((acc: number, d: any) => acc + (d.estimation_days || 0), 0) || 0
       } else if (sortConfig.key === 'target') {
-        valA = getFirstDeliv(a)?.planned_week_start || a.target_date || '9999-12-31'
-        valB = getFirstDeliv(b)?.planned_week_start || b.target_date || '9999-12-31'
+        valA = getFirstDeliv(a)?.lighthouse_month || a.target_date || '9999-12-31'
+        valB = getFirstDeliv(b)?.lighthouse_month || b.target_date || '9999-12-31'
       }
 
       const order = sortConfig.direction === 'asc' ? 1 : -1
@@ -277,6 +285,20 @@ export function EpicsDashboard() {
   }
 
   const statusOptions = ['backlog', 'ideation', 'rfd', 'in_dev', 'blocked', 'done', 'cancelled']
+
+  const getMonthOptions = () => {
+    const options = []
+    const now = new Date()
+    for (let i = -3; i <= 8; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
+        const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+        const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+        options.push({ value: val, label })
+    }
+    return options
+  }
+  const monthOptions = getMonthOptions()
+
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case 'done':
@@ -295,7 +317,10 @@ export function EpicsDashboard() {
       <td className='py-0.5 px-2 align-middle w-[140px] bg-blue-50 border-b border-r border-slate-200/60'>
         <Select
           value={(newRowData as any).initiative_id || ''}
-          onValueChange={v => setNewRowData({ ...newRowData, initiative_id: v } as any)}
+          onValueChange={v => {
+            const init = initiatives?.find((i: any) => i.id.toString() === v)
+            setNewRowData({ ...newRowData, initiative_id: v, owner_id: init?.owner_id || 'none' } as any)
+          }}
         >
           <SelectTrigger className='h-7 w-full border-slate-200 bg-white shadow-none px-2 text-xs !p-1'>
             <SelectValue placeholder='* בחר יוזמה' />
@@ -317,7 +342,6 @@ export function EpicsDashboard() {
             placeholder='אפיק (אופציונלי)'
             className='h-7 text-xs bg-white shadow-none focus-visible:ring-1 focus-visible:ring-primary w-full'
           />
-          {newRowData.new_epic_title && (
             <div className='flex items-center gap-1.5'>
               <span className='text-[10px] text-slate-500'>עדיפות:</span>
               <Select
@@ -328,25 +352,40 @@ export function EpicsDashboard() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='1' className='text-[10px]'>
-                    מחויב
-                  </SelectItem>
-                  <SelectItem value='2' className='text-[10px]'>
-                    אסטרטגי
+                  <SelectItem value='4' className='text-[10px]'>
+                    NTH
                   </SelectItem>
                   <SelectItem value='3' className='text-[10px]'>
                     רגיל
                   </SelectItem>
-                  <SelectItem value='4' className='text-[10px]'>
-                    NTH
+                  <SelectItem value='2' className='text-[10px]'>
+                    אסטרטגי
+                  </SelectItem>
+                  <SelectItem value='1' className='text-[10px]'>
+                    מחויב
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          )}
         </div>
       </td>
-      <td className='p-2 align-middle w-[120px] bg-blue-50 border-b border-l border-slate-200/60'></td>
+      <td className='py-0.5 px-2 align-middle w-[100px] bg-blue-50 border-b border-l border-slate-200/60'>
+        <Select value={newRowData.owner_id} onValueChange={(v) => setNewRowData({ ...newRowData, owner_id: v } as any)}>
+          <SelectTrigger className='h-7 border-transparent hover:border-slate-200 bg-white shadow-none px-2 text-xs'>
+            <SelectValue placeholder='ללא שיוך' />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='none' className='text-[10px] italic'>
+              ללא שיוך
+            </SelectItem>
+            {people?.map((p: any) => (
+              <SelectItem key={p.id} value={p.id} className='text-[10px]'>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </td>
     </>
   )
 
@@ -368,24 +407,7 @@ export function EpicsDashboard() {
           autoFocus={forceEpicId}
         />
       </td>
-      <td className='p-2 align-middle w-[120px]'>
-        <Select value={newRowData.owner_id} onValueChange={v => setNewRowData({ ...newRowData, owner_id: v })}>
-          <SelectTrigger className='h-7 w-full border-slate-200 bg-white shadow-none px-2 text-xs !p-1'>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='none' className='text-slate-400 italic'>
-              ללא שיוך
-            </SelectItem>
-            {people?.map((p: any) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </td>
-      <td className='p-2 align-middle w-[120px]'></td>
+      <td className='p-2 align-middle w-[360px]'></td>
       <td className='p-1.5 align-middle w-[110px]'>
         <Select value={newRowData.status} onValueChange={v => setNewRowData({ ...newRowData, status: v })}>
           <SelectTrigger className='h-7 w-full shadow-none px-2 text-[11px] bg-white border-slate-200'>
@@ -409,7 +431,24 @@ export function EpicsDashboard() {
           onKeyDown={e => e.key === 'Enter' && handleSaveInlineRow(forceEpicId ? addingSubTaskTo! : undefined)}
         />
       </td>
-      <td className='p-2 align-middle w-[140px] text-slate-400 text-[11px] text-center'>—</td>
+      <td className='p-1.5 align-middle w-[80px]'>
+        <Select
+          value={(newRowData as any).lighthouse_month ? `${(newRowData as any).lighthouse_month}-01` : 'none'}
+          onValueChange={v => setNewRowData({ ...newRowData, lighthouse_month: v === 'none' ? '' : v.substring(0, 7) } as any)}
+        >
+          <SelectTrigger className='h-7 w-[68px] shadow-none px-1.5 text-[11px] bg-white border-slate-200 tracking-tight'>
+            <SelectValue placeholder='-' />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='none'>-</SelectItem>
+            {monthOptions.map(opt => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </td>
       <td className='p-2 align-middle w-[40px] text-left'>
         <Button
           variant='ghost'
@@ -496,19 +535,13 @@ export function EpicsDashboard() {
                   אחראי/ת <SortIcon columnKey='owner' />
                 </th>
                 <th
-                  className='p-2.5 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th'
+                  className='p-2.5 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th w-[260px]'
                   onClick={() => handleSort('title')}
                 >
                   שם ה-deliverable <SortIcon columnKey='title' />
                 </th>
                 <th
-                  className='p-2.5 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th w-[100px]'
-                  onClick={() => handleSort('owner')}
-                >
-                  Feature Lead <SortIcon columnKey='owner' />
-                </th>
-                <th
-                  className='p-2.5 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th w-[240px]'
+                  className='p-2.5 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th w-[360px]'
                   onClick={() => handleSort('dod')}
                 >
                   DoD <SortIcon columnKey='dod' />
@@ -526,10 +559,10 @@ export function EpicsDashboard() {
                   הערכה <SortIcon columnKey='estimation' />
                 </th>
                 <th
-                  className='p-2.5 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th w-[90px]'
+                  className='p-2.5 whitespace-nowrap font-semibold cursor-pointer hover:text-slate-900 group/th w-[80px]'
                   onClick={() => handleSort('target')}
                 >
-                  לו&quot;ז <SortIcon columnKey='target' />
+                  LH <SortIcon columnKey='target' />
                 </th>
                 <th className='p-2.5 w-[40px]'></th>
               </tr>
@@ -537,7 +570,7 @@ export function EpicsDashboard() {
             {groups.length === 0 || (groups.length === 1 && groups[0].rows.length === 0) ? (
               <tbody>
                 <tr>
-                  <td colSpan={10} className='p-8 text-center text-slate-500 italic'>
+                  <td colSpan={9} className='p-8 text-center text-slate-500 italic'>
                     לא נמצאו משימות מתאימות לפילטר
                   </td>
                 </tr>
@@ -547,7 +580,7 @@ export function EpicsDashboard() {
                 <tbody key={`group-${gIdx}`} className='divide-y divide-slate-100'>
                   {groupBy !== 'none' && (
                     <tr className='bg-slate-50/80 border-b font-semibold text-slate-700 text-sm'>
-                      <td colSpan={10} className='p-2 px-4'>
+                      <td colSpan={9} className='p-2 px-4'>
                         <div className='flex items-center justify-between'>
                           <span>{group.header}</span>
                           <Badge variant='outline' className='bg-white'>
@@ -692,7 +725,7 @@ export function EpicsDashboard() {
                           {addingSubTaskTo === epic.id ? (
                             renderNewDeliverableCells(true)
                           ) : (
-                            <td colSpan={7} className='p-3 text-slate-400 italic text-xs'>
+                            <td colSpan={6} className='p-3 text-slate-400 italic text-xs'>
                               אין תוצרים עדיין.
                             </td>
                           )}
@@ -722,38 +755,29 @@ export function EpicsDashboard() {
                               />
                             </div>
                           </td>
-                          <td className='p-1.5 align-middle w-[120px]'>
-                            <Select
-                              value={deliverable.owner_id || 'none'}
-                              onValueChange={v =>
-                                handleUpdateDeliverable(deliverable.id, 'owner_id', v === 'none' ? null : v)
-                              }
-                            >
-                              <SelectTrigger className='h-7 border-transparent hover:border-slate-200 bg-transparent shadow-none px-2 text-xs'>
-                                <SelectValue placeholder='ללא שיוך' />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value='none' className='text-[10px] italic'>
-                                  ללא שיוך
-                                </SelectItem>
-                                {people?.map((p: any) => (
-                                  <SelectItem key={p.id} value={p.id} className='text-[10px]'>
-                                    {p.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </td>
-                          <td className='p-2 align-middle w-[120px]'>
-                            <div
-                              className='text-xs text-slate-600 bg-transparent border border-transparent hover:border-slate-200 px-1.5 py-1 rounded truncate'
-                              title={deliverable.dod || ''}
-                            >
-                              <InlineEdit
-                                value={deliverable.dod || ''}
-                                onSave={v => handleUpdateDeliverable(deliverable.id, 'dod', v)}
-                                className='w-full'
-                              />
+                          <td className='p-1.5 align-middle w-[360px]'>
+                            <div className='group relative flex items-start w-full bg-transparent hover:bg-slate-50 rounded border border-transparent hover:border-slate-200 h-[36px] overflow-hidden'>
+                              <div className='flex-1 h-full overflow-hidden text-[11px] text-slate-600 px-1 py-0.5 cursor-text z-0'>
+                                <InlineEdit
+                                  value={deliverable.dod || ''}
+                                  onSave={v => handleUpdateDeliverable(deliverable.id, 'dod', v)}
+                                  className='w-full h-full min-h-[34px] !p-0 !m-0 !bg-transparent !border-transparent leading-tight resize-none whitespace-pre-wrap overflow-y-auto'
+                                  multiline={true}
+                                />
+                              </div>
+                              <Button
+                                variant='outline'
+                                size='icon'
+                                className='h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 bg-white shadow-sm border border-slate-200 transition-opacity absolute left-1 top-1 z-10'
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDodModalDeliverable(deliverable)
+                                  setDodModalText(deliverable.dod || '')
+                                  setDodModalOpen(true)
+                                }}
+                              >
+                                <Pencil className='w-3 h-3 text-slate-400 hover:text-slate-600' />
+                              </Button>
                             </div>
                           </td>
                           <td className='p-1.5 align-middle w-[110px]'>
@@ -787,22 +811,25 @@ export function EpicsDashboard() {
                               <span className='ml-0.5 text-slate-400'>d</span>
                             </div>
                           </td>
-                          <td className='p-1.5 align-middle w-[90px]'>
-                            <div className='text-slate-500 text-[11px] inline-flex items-center gap-1'>
-                              {deliverable.planned_week_start
-                                ? new Date(deliverable.planned_week_start).toLocaleDateString('he-IL', {
-                                    day: '2-digit',
-                                    month: '2-digit'
-                                  })
-                                : '?'}
-                              <span>-</span>
-                              {deliverable.planned_week_end
-                                ? new Date(deliverable.planned_week_end).toLocaleDateString('he-IL', {
-                                    day: '2-digit',
-                                    month: '2-digit'
-                                  })
-                                : '?'}
-                            </div>
+                          <td className='p-1.5 align-middle w-[80px]'>
+                            <Select
+                              value={deliverable.lighthouse_month ? deliverable.lighthouse_month.substring(0, 10) : 'none'}
+                              onValueChange={v =>
+                                handleUpdateDeliverable(deliverable.id, 'lighthouse_month', v === 'none' ? null : v)
+                              }
+                            >
+                              <SelectTrigger className='h-7 w-[68px] border-transparent hover:border-slate-200 bg-transparent shadow-none px-1 text-[11px] tracking-tight font-medium'>
+                                <SelectValue placeholder='-' />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value='none'>-</SelectItem>
+                                {monthOptions.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </td>
                           <td className='p-2 align-middle text-left w-[40px]'></td>
                         </tr>
@@ -845,6 +872,37 @@ export function EpicsDashboard() {
           </div>
         )}
       </div>
+
+      <Dialog open={dodModalOpen} onOpenChange={setDodModalOpen}>
+        <DialogContent className='sm:max-w-[600px]'>
+          <DialogHeader>
+            <DialogTitle className='text-lg font-bold'>
+              DoD - {dodModalDeliverable?.title}
+            </DialogTitle>
+          </DialogHeader>
+          <div className='py-4'>
+            <textarea
+              className='flex w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 min-h-[280px] resize-y whitespace-pre-wrap leading-relaxed'
+              placeholder='הזן פירוט מדדי סיום במלואם...'
+              value={dodModalText}
+              onChange={e => setDodModalText(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setDodModalOpen(false)}>
+              ביטול
+            </Button>
+            <Button
+              onClick={() => {
+                handleUpdateDeliverable(dodModalDeliverable.id, 'dod', dodModalText)
+                setDodModalOpen(false)
+              }}
+            >
+              שמירה
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

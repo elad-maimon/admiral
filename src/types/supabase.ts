@@ -1,4 +1,10 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
   graphql_public: {
@@ -49,12 +55,12 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'deliverable_dependencies_deliverable_id_fkey'
-            columns: ['deliverable_id']
+            foreignKeyName: "deliverable_dependencies_deliverable_id_fkey"
+            columns: ["deliverable_id"]
             isOneToOne: false
-            referencedRelation: 'deliverables'
-            referencedColumns: ['id']
-          }
+            referencedRelation: "deliverables"
+            referencedColumns: ["id"]
+          },
         ]
       }
       deliverables: {
@@ -66,8 +72,8 @@ export type Database = {
           epic_id: string
           estimation_days: number | null
           id: string
+          lighthouse_month: string | null
           metadata: Json | null
-          owner_id: string | null
           planned_week_end: string | null
           planned_week_start: string | null
           slip_count: number
@@ -83,8 +89,8 @@ export type Database = {
           epic_id: string
           estimation_days?: number | null
           id?: string
+          lighthouse_month?: string | null
           metadata?: Json | null
-          owner_id?: string | null
           planned_week_end?: string | null
           planned_week_start?: string | null
           slip_count?: number
@@ -100,8 +106,8 @@ export type Database = {
           epic_id?: string
           estimation_days?: number | null
           id?: string
+          lighthouse_month?: string | null
           metadata?: Json | null
-          owner_id?: string | null
           planned_week_end?: string | null
           planned_week_start?: string | null
           slip_count?: number
@@ -111,19 +117,12 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'deliverables_epic_id_fkey'
-            columns: ['epic_id']
+            foreignKeyName: "deliverables_epic_id_fkey"
+            columns: ["epic_id"]
             isOneToOne: false
-            referencedRelation: 'epics'
-            referencedColumns: ['id']
+            referencedRelation: "epics"
+            referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: 'deliverables_owner_id_fkey'
-            columns: ['owner_id']
-            isOneToOne: false
-            referencedRelation: 'people'
-            referencedColumns: ['id']
-          }
         ]
       }
       epics: {
@@ -165,19 +164,19 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'epics_initiative_id_fkey'
-            columns: ['initiative_id']
+            foreignKeyName: "epics_initiative_id_fkey"
+            columns: ["initiative_id"]
             isOneToOne: false
-            referencedRelation: 'initiatives'
-            referencedColumns: ['id']
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'epics_owner_id_fkey'
-            columns: ['owner_id']
+            foreignKeyName: "epics_owner_id_fkey"
+            columns: ["owner_id"]
             isOneToOne: false
-            referencedRelation: 'people'
-            referencedColumns: ['id']
-          }
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
         ]
       }
       initiatives: {
@@ -210,19 +209,19 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'initiatives_objective_id_fkey'
-            columns: ['objective_id']
+            foreignKeyName: "initiatives_objective_id_fkey"
+            columns: ["objective_id"]
             isOneToOne: false
-            referencedRelation: 'objectives'
-            referencedColumns: ['id']
+            referencedRelation: "objectives"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'initiatives_owner_id_fkey'
-            columns: ['owner_id']
+            foreignKeyName: "initiatives_owner_id_fkey"
+            columns: ["owner_id"]
             isOneToOne: false
-            referencedRelation: 'people'
-            referencedColumns: ['id']
-          }
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
         ]
       }
       join_requests: {
@@ -231,7 +230,7 @@ export type Database = {
           auth_user_id: string
           created_at: string
           id: string
-          status: Database['public']['Enums']['join_request_status']
+          status: Database["public"]["Enums"]["join_request_status"]
           updated_at: string
         }
         Insert: {
@@ -239,7 +238,7 @@ export type Database = {
           auth_user_id: string
           created_at?: string
           id?: string
-          status?: Database['public']['Enums']['join_request_status']
+          status?: Database["public"]["Enums"]["join_request_status"]
           updated_at?: string
         }
         Update: {
@@ -247,7 +246,7 @@ export type Database = {
           auth_user_id?: string
           created_at?: string
           id?: string
-          status?: Database['public']['Enums']['join_request_status']
+          status?: Database["public"]["Enums"]["join_request_status"]
           updated_at?: string
         }
         Relationships: []
@@ -282,12 +281,12 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'key_results_objective_id_fkey'
-            columns: ['objective_id']
+            foreignKeyName: "key_results_objective_id_fkey"
+            columns: ["objective_id"]
             isOneToOne: false
-            referencedRelation: 'objectives'
-            referencedColumns: ['id']
-          }
+            referencedRelation: "objectives"
+            referencedColumns: ["id"]
+          },
         ]
       }
       lighthouse_items: {
@@ -320,26 +319,26 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'lighthouse_items_deliverable_id_fkey'
-            columns: ['deliverable_id']
+            foreignKeyName: "lighthouse_items_deliverable_id_fkey"
+            columns: ["deliverable_id"]
             isOneToOne: false
-            referencedRelation: 'deliverables'
-            referencedColumns: ['id']
+            referencedRelation: "deliverables"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'lighthouse_items_feature_lead_fkey'
-            columns: ['feature_lead']
+            foreignKeyName: "lighthouse_items_feature_lead_fkey"
+            columns: ["feature_lead"]
             isOneToOne: false
-            referencedRelation: 'people'
-            referencedColumns: ['id']
+            referencedRelation: "people"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'lighthouse_items_lighthouse_id_fkey'
-            columns: ['lighthouse_id']
+            foreignKeyName: "lighthouse_items_lighthouse_id_fkey"
+            columns: ["lighthouse_id"]
             isOneToOne: false
-            referencedRelation: 'lighthouses'
-            referencedColumns: ['id']
-          }
+            referencedRelation: "lighthouses"
+            referencedColumns: ["id"]
+          },
         ]
       }
       lighthouses: {
@@ -369,12 +368,12 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'lighthouses_created_by_fkey'
-            columns: ['created_by']
+            foreignKeyName: "lighthouses_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
-            referencedRelation: 'people'
-            referencedColumns: ['id']
-          }
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
         ]
       }
       milestones: {
@@ -407,12 +406,12 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'milestones_initiative_id_fkey'
-            columns: ['initiative_id']
+            foreignKeyName: "milestones_initiative_id_fkey"
+            columns: ["initiative_id"]
             isOneToOne: false
-            referencedRelation: 'initiatives'
-            referencedColumns: ['id']
-          }
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
         ]
       }
       objectives: {
@@ -481,12 +480,12 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'people_team_id_fkey'
-            columns: ['team_id']
+            foreignKeyName: "people_team_id_fkey"
+            columns: ["team_id"]
             isOneToOne: false
-            referencedRelation: 'teams'
-            referencedColumns: ['id']
-          }
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
         ]
       }
       person_unavailability: {
@@ -510,12 +509,12 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'person_unavailability_person_id_fkey'
-            columns: ['person_id']
+            foreignKeyName: "person_unavailability_person_id_fkey"
+            columns: ["person_id"]
             isOneToOne: false
-            referencedRelation: 'people'
-            referencedColumns: ['id']
-          }
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
         ]
       }
       teams: {
@@ -550,7 +549,7 @@ export type Database = {
           email: string
           id: string
           name: string
-          status: Database['public']['Enums']['join_request_status']
+          status: Database["public"]["Enums"]["join_request_status"]
           updated_at: string
         }[]
       }
@@ -558,7 +557,7 @@ export type Database = {
       link_my_people_record: { Args: never; Returns: undefined }
     }
     Enums: {
-      join_request_status: 'pending' | 'approved' | 'declined'
+      join_request_status: "pending" | "approved" | "declined"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -566,31 +565,33 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
-    : never = never
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
-    ? (DefaultSchema['Tables'] & DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -598,22 +599,24 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables'] | { schema: keyof DatabaseWithoutInternals },
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
-    : never = never
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -621,22 +624,24 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables'] | { schema: keyof DatabaseWithoutInternals },
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
-    : never = never
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -644,44 +649,47 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums'] | { schema: keyof DatabaseWithoutInternals },
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
-    : never = never
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
-    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema['CompositeTypes']
+    | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
-    : never = never
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
-    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
   graphql_public: {
-    Enums: {}
+    Enums: {},
   },
   public: {
     Enums: {
-      join_request_status: ['pending', 'approved', 'declined']
-    }
-  }
+      join_request_status: ["pending", "approved", "declined"],
+    },
+  },
 } as const
+

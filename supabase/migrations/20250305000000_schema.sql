@@ -100,7 +100,6 @@ CREATE TABLE deliverables (
   epic_id                UUID NOT NULL REFERENCES epics(id) ON DELETE CASCADE,
   title                  TEXT NOT NULL,
   description            TEXT,
-  owner_id               UUID REFERENCES people(id),
   dod                    TEXT,
   status                 TEXT NOT NULL DEFAULT 'backlog'
                            CHECK (status IN ('backlog', 'ideation', 'rfd', 'in_dev',
@@ -109,6 +108,7 @@ CREATE TABLE deliverables (
   planned_week_start     DATE,
   planned_week_end       DATE,
   actual_completion_date DATE,
+  lighthouse_month       DATE,
   slip_count             INT NOT NULL DEFAULT 0,
   metadata               JSONB DEFAULT '{}',
   created_at             TIMESTAMPTZ DEFAULT NOW(),
