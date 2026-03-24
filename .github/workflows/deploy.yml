@@ -25,11 +25,27 @@ jobs:
           node-version: '24'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore node_modules cache
+        id: cache-npm
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          # Only bust node_modules lockfile changes. Not source code!
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
 
-      - name: Install Vercel CLI
-        run: npm install --global vercel
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          # Bust Next cache when source code changes, so it saves the fresh output
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          # If exact match fails, fallback to the previous cache so Next.js can at least reuse 90% of unchanged pages!
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+
+      - name: Install dependencies
+        if: steps.cache-npm.outputs.cache-hit != 'true'
+        run: npm ci
 
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
@@ -54,10 +70,10 @@ jobs:
       # PHASE 2: Deploy Frontend Code
       - name: Pull Vercel Environment Information
         # Vercel natively reads your committed `.vercel/project.json` to know exactly which app to deploy!
-        run: vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+        run: npx --yes vercel pull --yes --environment=production --token=$VERCEL_TOKEN
 
       - name: Build Project Artifacts
-        run: vercel build --prod --token=$VERCEL_TOKEN
+        run: npx --yes vercel build --prod --token=$VERCEL_TOKEN
 
       - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+        run: npx --yes vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
