@@ -36,8 +36,11 @@ jobs:
         with:
           version: latest
 
-      # PHASE 1: Deploy Database Migrations
-      - name: Push Database Migrations
+      # PHASE 1: Deploy Database Migrations and Config
+      - name: Push Database Config & Migrations
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: |
           # We dynamically extract the Supabase Project ID directly from your .env.production to strictly respect DRY!
           EXTRACTED_PROJECT_ID=$(grep NEXT_PUBLIC_SUPABASE_URL .env.production | cut -d'/' -f3 | cut -d'.' -f1)
@@ -46,6 +49,7 @@ jobs:
           # Link and Push using the secure Auth Secrets
           supabase link --project-ref $EXTRACTED_PROJECT_ID --password $SUPABASE_DB_PASSWORD
           supabase db push --password $SUPABASE_DB_PASSWORD
+          supabase config push
 
       # PHASE 2: Deploy Frontend Code
       - name: Pull Vercel Environment Information
