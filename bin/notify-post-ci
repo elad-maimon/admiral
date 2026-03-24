@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+# Wait a few seconds to ensure GitHub Actions registers the git push payload natively on their servers
+echo "⏳ Waiting for GitHub Actions to register the push payload..."
+sleep 3
+
+# Fetch the most recent workflow run natively created by this user
+RUN_ID=$(gh run list --limit 1 --json databaseId -q '.[0].databaseId')
+
+if [ -z "$RUN_ID" ]; then
+  echo "❌ Error: Could not find any recent active runs on GitHub Actions."
+  exit 1
+fi
+
+echo "🚀 Tracking GitHub Action Pipeline [Run ID: $RUN_ID]..."
+
+# Watch the pipeline natively. The --exit-status flag cleanly propagates the pipeline failure/success code instantly!
+gh run watch --exit-status "$RUN_ID"
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 0 ]; then
+  # Success
+  echo ""
+  echo "✅ CI/CD Pipeline Deployed Successfully!"
+  echo "   (っ＾▿＾)💨   [ALL SYSTEMS NOMINAL]"
+  
+  # Trigger macOS native system notification
+  osascript -e 'display notification "The CI/CD pipeline built and deployed perfectly to Production! ✅" with title "Admiral CI/CD Success 🚀"'
+else
+  # Failure
+  echo ""
+  echo "❌ CI/CD Pipeline Failed during Execution."
+  echo "   (╯°□°)╯︵ ┻━┻  [SYSTEM CRASH]"
+  
+  # Trigger macOS native system notification
+  osascript -e 'display notification "The Action runner crashed during the deployment pipeline! ❌ Check the GitHub Logs immediately." with title "Admiral CI/CD Failure ⚠️"'
+fi
