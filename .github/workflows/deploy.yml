@@ -33,16 +33,6 @@ jobs:
           # Only bust node_modules lockfile changes. Not source code!
           key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
 
-      - name: Restore Next.js build cache
-        uses: actions/cache@v4
-        with:
-          path: .next/cache
-          # Bust Next cache when source code changes, so it saves the fresh output
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
-          # If exact match fails, fallback to the previous cache so Next.js can at least reuse 90% of unchanged pages!
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
-
       - name: Install dependencies
         if: steps.cache-npm.outputs.cache-hit != 'true'
         run: npm ci
